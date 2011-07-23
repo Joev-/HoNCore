@@ -1,2 +1,5 @@
 TODO
 ERRORS
+
+# Ignore compiled python code
+*.pyc
