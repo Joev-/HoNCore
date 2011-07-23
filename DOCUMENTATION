@@ -1,5 +1,5 @@
-HoNCore - A Python library providing an easy interface to the HoN chat and master servers.
-HoNCore-light - Without all of the buddy/banlist/ignorelist structures. Used for HoNStatus
+HoNCore - A Python library providing a framework for communicating with the HoN chat and master servers.
+
 
 Client settings/configuration
 ------------------------------------
