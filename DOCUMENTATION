@@ -17,6 +17,9 @@ The settings available and their default values are :
 
 The server addresses MUST contain the forward slash at the end.
 
+To configure the client pass the desired keyword arguments to the client.configure() method like so:
+client.configure(chatver=0x0E, invis=True)
+
 Exceptions
 ------------------------------------
 
@@ -42,24 +45,25 @@ The error code id's are assigned as the following.
 
 The available error codes at the current time are as follows.
 
-000 -> 100 :
-	* None
 
-100 -> 200 :
-	100 - Could not connect to the masterserver.
-	101 - Could not obtain login data.
-	102 - Incorrect username/password.
-	103 - Failed to get login data after 3 attempts.
-	104 - Connection to the master server timed out.
-	105 - Connection to the master server was rejected.
-	106 - Master server failed to receieve logout request, forcing logout.
-	107 - Requester HTTP error. (Don't leave this in, fix it up.)
+100 : 'Could not connect to the masterserver.'
+101 : 'Could not obtain login data.'
+102 : 'Incorrect username/password.'
+103 : 'Failed to get login data after 3 attempts.'
+104 : 'Connection to the master server timed out.'
+105 : 'Connection to the master server was rejected.'
+106 : 'Master server failed to receieve logout request, forcing logout.'
+107 : 'Requester HTTP error.', # Don't leave this in, expand it to handle each different HTTP/URL Error
+108 : 'Unexpected opcode when parsing PHP serialisation.'
+109 : 'Bad HTTP status code.'
+110 : 'Connection reset by peer'
+111 : 'Connection refused'
+112 : 'Connection timed out'
 
+200 : 'Chat server did not respond to authentication request.'
+201 : 'Connection to the chat server timed out.'
+202 : 'Connection to the chat server was rejected.'
+203 : 'Failed to connect to the chat server after 3 attempts.'
+204 : 'Empty packet received.'
+205 : 'No cookie/auth hash provided.'
 
-200 -> 300:
-	200 - Chat server did not respond to authentication request.
-	201 - Connection to the chat server timed out.
-	202 - Connection to the chat server was rejected.
-	203 - Failed to connect to the chat server after 3 attempts.
-	204 - Empty packet received.
-	205 - No cookie/auth hash provided.
