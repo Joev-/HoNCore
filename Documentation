@@ -1,0 +1,65 @@
+HoNCore - A Python library providing an easy interface to the HoN chat and master servers.
+HoNCore-light - Without all of the buddy/banlist/ignorelist structures. Used for HoNStatus
+
+Client settings/configuration
+------------------------------------
+
+The client provides a method which allows modification of it's settings. The default settings should prove to be good enough, but optionally things like logging in as invisible or updating the chat protocol version may be desirable.
+The settings available and their default values are :
+	
+	Name 			Default 								Desc
+	chatport 		11031									The port used for the chat server connection. 
+	chatver 		0x0E									The chat protocol version sent when authenticating.
+	invis 			False									A flag used to toggle invisible mode when logging in.
+	masterserver 	http://masterserver.hon.s2games.com/	The master server used for HTTP requests.
+	basicserver 	http://heroesofnewerth.com/				The basic server used for some HTTP requests.
+	honver			2.0.39.1 								The version of HoN, used when setting the user agent.
+
+The server addresses MUST contain the forward slash at the end.
+
+Exceptions
+------------------------------------
+
+Three exceptions can be caught
+	* HoNException
+	* MasterServerError
+	* ChatServerError
+	* HoNConfigError - To be considered.
+
+All exceptions raised will provide an error code and an error message, available through the attributes 'code' and 'error'.
+
+HoNException is the base exception class.
+
+MasterServerError will be raised when communicating with the master server, this includes any tasks which use the requester module to send HTTP GET/POST requests such as logging in/out or requesting the message of the day list.
+
+ChatServerError will be raised when communicating with the chat server, this includes any task which involves working with sockets or sending/receiving packets.
+
+The error code id's are assigned as the following.
+
+000 -> 100 : N/A
+100 -> 200 : MasterServerError
+200 -> 300 : ChatServerError
+
+The available error codes at the current time are as follows.
+
+000 -> 100 :
+	* None
+
+100 -> 200 :
+	100 - Could not connect to the masterserver.
+	101 - Could not obtain login data.
+	102 - Incorrect username/password.
+	103 - Failed to get login data after 3 attempts.
+	104 - Connection to the master server timed out.
+	105 - Connection to the master server was rejected.
+	106 - Master server failed to receieve logout request, forcing logout.
+	107 - Requester HTTP error. (Don't leave this in, fix it up.)
+
+
+200 -> 300:
+	200 - Chat server did not respond to authentication request.
+	201 - Connection to the chat server timed out.
+	202 - Connection to the chat server was rejected.
+	203 - Failed to connect to the chat server after 3 attempts.
+	204 - Empty packet received.
+	205 - No cookie/auth hash provided.
