@@ -57,7 +57,7 @@ game time. e.g. "Current game time: Lobby" or "Current game time: Banning" or "C
 """
 class User:
 	def __init__(self, accid, nick, buddy_id=None, clan_id=None, clan_tag="", clan_name=None, status=0, flag=0x00):
-		self.accid = accid
+		self.account_id = account_id
 		self.nickname = nick
 		self.buddy_id = buddy_id
 		self.clan_id = clan_id
@@ -84,9 +84,10 @@ class Account:
 		self.auth_hash = auth_hash
 		self.chat_url = chat_url
 		self.ip = ip
-		self.buddylist = []
-		self.banlist = []
-		self.ignorelist = []
+		# self.contacts = []
+		self.buddy_list = {}
+		self.ban_list = {}
+		self.ignore_list = {}
 		self.logged_in = False
 
 		global account

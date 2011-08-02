@@ -5,10 +5,28 @@ from lib import phpserialize as phpd
 
 """ Deserialises the php stuff and creates objects, not really... big... since there's this like, library... already.. """
 
-""" There seems to be a difference between super_id and account_id, atleast in a trial account. 
-	A trial account that I created would not be able to use this program as the super_id was
-	different to the account id. Replacing super_id with account_id is the fix, but as to why
-	is a case to be solved.
+""" 
+There seems to be a difference between super_id and account_id, atleast in a trial account. 
+A trial account that I created would not be able to use this program as the super_id was
+different to the account id. Replacing super_id with account_id is the fix, but as to why
+is a case to be solved.
+
+If a user does not have any buddies then the buddy array is structured as follows.
+
+buddy {
+	error {
+		"No buddies found" 
+	}
+}
+
+If a user has a buddy then it is structured as the following.
+
+buddy_list {
+	<account_id> {
+		<buddy_data_array>
+	}
+}
+
 """
 
 def parse_raw(raw):
@@ -22,10 +40,27 @@ def parse(raw):
 		raise MasterServerError(102)
 	
 	get_basic_info(data)
-	get_buddies(data['buddy_list'][int(data['account_id'])])
-	# getClanMemebrs(data)
-	# getBannedList(data)
-	# getIgnoreList(data)
+
+	try:
+		get_buddies(data['buddy_list'])
+	except KeyError:
+		user.account.buddy_list = {}
+	
+	try:
+		get_banned_list(data['banned_list'])
+	except KeyError:
+		user.account.ban_list = {}
+
+	try:
+		get_ignore_list(data['ignored_list'])
+	except KeyError:
+		user.account.ignore_list = {}
+	
+	try:
+		get_clan_memebrs(data['clan_member_info'])
+	except KeyError:
+		# raise MasterServerError(123)
+		pass
 
 	return True
 
@@ -36,7 +71,7 @@ def get_basic_info(data):
 		raise MasterServerError(101, "KeyError", e)
 	
 def get_buddies(buddylist):
-	""" NOTE: It is not possible to get flag and status here """
+	""" NOTE: It is not possible to get flag and status here. """
 	for userKey in buddylist:
 		accid = buddylist[userKey]['account_id']
 		buddyid = buddylist[userKey]['buddy_id']
@@ -45,13 +80,13 @@ def get_buddies(buddylist):
 		clanname = buddylist[userKey]['clan_name']
 
 		buddy = user.User(accid, nick, buddy_id=buddyid, clan_tag=clantag, clan_name=clanname, status=0, flag=0)
-		user.account.buddylist.append(buddy)
-
-def get_clan_memebrs(data):
-	pass
+		user.account.buddy_list[accid] = buddy
 
 def get_banned_list(data):
 	pass
 
 def get_ignore_list(data):
+	pass
+
+def get_clan_memebrs(data):
 	pass

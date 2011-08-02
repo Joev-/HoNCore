@@ -92,6 +92,8 @@ HON_CS_BUDDY_ACCEPT				= 0xB3
 """
 
 socket_events = {
+	HON_SC_INITIAL_STATUS : "initial_status",
 	HON_SC_PING : "ping",
 	HON_SC_TOTAL_ONLINE : "total_online",
+	HON_SC_WHISPER : "whisper",
 }

@@ -1,5 +1,5 @@
 import struct, time, threading, socket
-import client, handler
+import client, handler, user
 from exceptions import *
 from packetdef import *
 from lib.construct import *
@@ -106,7 +106,12 @@ def send_auth(sock, account_id, cookie, ip, auth_hash, chatver, invis):
 	packet = c.build(Container(id=HON_CS_AUTH_INFO, aid=account_id, cookie=unicode(cookie), ip=unicode(ip), 
 							auth=unicode(auth_hash), proto=chatver, unknown=0x01, mode=0x03 if invis else 0x00))
 	
-	sock.send(packet)
+	# print "Sending packet - 0x%x:%s:%s:%s:%s:0x%x:0x%x:0x%x" % (HON_CS_AUTH_INFO, account_id, cookie, ip, auth_hash, chatver, 0x01, 0x00)
+	try:
+		sock.send(packet)
+	except socket.error, e:
+		if e.errno == 32:
+			raise ChatServerError(206)
 
 	resp = sock.recv(256)
 	if len(resp) == 0:
@@ -117,31 +122,64 @@ def send_auth(sock, account_id, cookie, ip, auth_hash, chatver, invis):
 		raise ChatServerError(200)
 
 
-""" Packet Handlers.
-	In numeric order.
-	Incoming packets.
-	<--- HON_SC_PING
-	<--- HON_SC_TOTAL_ONLINE
-"""
+""" Packet Handlers."""
 
-@handler.packet(HON_SC_INITIAL_STATUS)
+@handler.packet_handler(HON_SC_INITIAL_STATUS)
 def parse_initial_status(packet):
 	""" 
-	The initial status packet contains a of a lot of information which can be used to set
-	the initial state of buddies and servers and players online and what not.
+	The initial status packet contains information for all available buddy and clan members, 
+	as well as some server statuses and matchmaking settings.
 	"""
-	pass
+	contact_count = int(struct.unpack_from('I', packet[4:8])[0]) # Tuples?!!
+	contact_data = packet[8:]
+	if contact_count > 0:
+		i = 1
+		print("Parsing data for %i contacts." % contact_count)
+		while i <= int(contact_count):
+			status = int(struct.unpack_from('B', contact_data[4])[0])
+			nick = ""
+			gamename = ""
+			flag = ""
+			if status == HON_STATUS_INLOBBY or status == HON_STATUS_INGAME:
+				c = Struct("buddy", ULInt32("buddyid"), Byte("status"), Byte("flag"), CString("server"), CString("gamename"))
+				r = c.parse(contact_data)
+				nick = user.id2nick(r.buddyid)
+				flag = str(r.flag)
+				contact_data = contact_data[6 + (len(r.server)+1+len(r.gamename)+1):]
+				gamename = r.gamename
+			else:
+				c = Struct("buddy", ULInt32("buddyid"), Byte("status"), Byte("flag"))
+				r = c.parse(contact_data[:6])
+				nick = user.id2nick(r.buddyid)
+				flag = str(r.flag)
+				contact_data = contact_data[6:]
+			
+			if nick != "":
+				# Check for a name because sometimes my own account id is in the list of online buddies, why?
+				# user.updateStatus(nick)
+				if gamename is not "":
+					print(nick + " is online and in the game " + gamename)
+				else:
+					print(nick + " is online.")
+			i+=1
 
-@handler.packet(HON_SC_PING)
+@handler.packet_handler(HON_SC_PING)
 def parse_ping(packet):
 	""" Replies to a ping request (0x2A00) with a pong response (0x2A01) """
 	s = client.connection['socket']
 	s.send(struct.pack('H', HON_CS_PONG))
 	return {}
 
-@handler.packet(HON_SC_TOTAL_ONLINE)
+@handler.packet_handler(HON_SC_TOTAL_ONLINE)
 def parse_total_online(packet):
 	""" Gets the number of players online """
 	count = struct.unpack('I', packet[4:8])[0]
 	return {'players_online' : count}
 
+@handler.packet_handler(HON_SC_WHISPER)
+def parse_whisper(packet):
+	""" A normal whisper from anyone """
+	print "Parsing whisper"
+	c = Struct("packet", ULInt16("size"), ULInt16("packetid"), CString("name"), CString("message"))
+	r = c.parse(packet)
+	return {"name" : r.name, "message" : r.message }

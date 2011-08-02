@@ -2,11 +2,7 @@
 Custom exceptions to be raised by this library and caught by any program using this library.
 Helps debug login/logout events/incorrect data and socket errors (timeout, broken pipes etc).
 
-TODO
-	* During the log in sequence, if the server's are down (i.e. maintenance) there is a mix of urlerrors from urllib2, 
-	  both error 104 and 111, connection reset by peer and connection refused, are raised. Is there a
-	  reason for this?
-	 
+TODO	 
 	 * urllib2 sometimes throws BadStatusLine which means the server responded with an unknown HTTP status code. 
 	   Needs to be handled correctly, it should throw a MasterServerError 109, but it needs a stronger definition.
 """
@@ -58,10 +54,15 @@ errormap = {
 	110 : 'Connection reset by peer', # Good sign it's down, it's dropping connections?
 	111 : 'Connection refused', # Very good sign it's down, it's refusing connections?
 	112 : 'Connection timed out', # Hmm, what happens here?
+	120 : 'No buddies found',
+	121 : 'No ban list found',
+	122 : 'No ignored users found',
+	123 : 'No clan members found',
 	200 : 'Chat server did not respond to authentication request.',
 	201 : 'Connection to the chat server timed out.',
 	202 : 'Connection to the chat server was rejected.',
 	203 : 'Failed to connect to the chat server after 3 attempts.',
 	204 : 'Empty packet received.',
 	205 : 'No cookie/auth hash provided.',
+	206 : 'Broken Pipe, is the chat version correct?',
 }

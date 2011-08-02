@@ -3,7 +3,7 @@ import requester, packet, deserialise, user
 from exceptions import *
 
 connection = { "socket" : None, "connected" : False }
-config = {"chatport" : 11031,"chatver" : 0x0E,"invis" : False}
+config = {"chatport" : 11031,"chatver" : 0x0F,"invis" : False}
 
 # TODO: Put to use? Maybe make a utils module and provide motd_to_html()
 color_map = ["00","1C","38","54","70","8C","A8","C4","E0","FF"]
@@ -70,18 +70,24 @@ def logout():
 			* Connection timed out
 			* Connection refused.
 	"""
-	attempts = 3
-	while True:
-		try:
-			requester.logout(user.account.cookie)
-			user.account.logged_in = False
-			break
-		except MasterServerError, e:
-			if attempts == 3:
-				raise	# Re-raise the last exception given
-			timeout = pow(2, attempts)
-			time.sleep(timeout)
-			attempts += 1
+	if user.account == None:
+		return
+	
+	if not user.account.cookie:
+		user.account.logged_in = False
+	else:
+		attempts = 3
+		while True:
+			try:
+				requester.logout(user.account.cookie)
+				user.account.logged_in = False
+				break
+			except MasterServerError, e:
+				if attempts == 3:
+					raise	# Re-raise the last exception given
+				timeout = pow(2, attempts)
+				time.sleep(timeout)
+				attempts += 1
 
 
 def is_logged_in():
@@ -98,7 +104,7 @@ def chat_connect():
 			* Account data mismatch.
 			* Connection to the server timed out.
 	"""
-	if user.account.cookie == None or user.account.auth_hash == None:
+	if user.account == None or user.account.cookie == None or user.account.auth_hash == None:
 		raise ChatServerError(205)
 	
 	global connection
@@ -106,6 +112,7 @@ def chat_connect():
 	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 	try:
 		s.connect((user.account.chat_url, config['chatport']))
+		print "Opened socket on %s:%s" % (user.account.chat_url, config['chatport'])
 	except socket.timeout:
 		raise ChatServerError(201)
 
@@ -116,10 +123,13 @@ def chat_connect():
 		try:
 			packet.send_auth(s, user.account.account_id, user.account.cookie, user.account.ip, user.account.auth_hash, config['chatver'], config['invis'])
 			break
-		except ChatServerError:
+		except ChatServerError, e:
 			if attempts == 3:
 				connection['connected'] = False # Make sure this is set.
-				raise ChatServerError(203)
+				if e.code == 206: # Broken Pipe, want to see the message because it's important!
+					raise
+				else:
+					raise ChatServerError(203)
 			timeout = pow(2, attempts)
 			time.sleep(timeout)
 			attempts += 1

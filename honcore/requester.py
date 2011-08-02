@@ -5,7 +5,7 @@ from httplib import BadStatusLine
 config = {
 	"masterserver" : "http://masterserver.hon.s2games.com/", 
 	"basicserver" : "http://heroesofnewerth.com/", 
-	"honver" : "2.0.40.2"
+	"honver" : "2.1.0.1"
 }
 
 header = { 'User-Agent' : "S2 Games/Heroes of Newerth/" + config['honver'] + "/lac/x86-biarch" }
@@ -13,6 +13,9 @@ header = { 'User-Agent' : "S2 Games/Heroes of Newerth/" + config['honver'] + "/l
 """ 
 Sends requests to the HoN master servers.
 These are just basic HTTP get requests which return serialised php.
+
+A version of '2.1.0' forced the connection to be dropped by the server, changing it back to a 4 'digit' version fixes. Guess the version string
+must be 4 digits..
 
 TODO:
 	 * If sending a logout request times out then it's a bit... confusing as to what's going on. Could need cleaning up.
