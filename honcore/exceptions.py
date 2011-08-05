@@ -53,7 +53,7 @@ errormap = {
 	109 : 'Bad HTTP status code.',
 	110 : 'Connection reset by peer', # Good sign it's down, it's dropping connections?
 	111 : 'Connection refused', # Very good sign it's down, it's refusing connections?
-	112 : 'Connection timed out', # Hmm, what happens here?
+	112 : 'Connection timed out',
 	120 : 'No buddies found',
 	121 : 'No ban list found',
 	122 : 'No ignored users found',

@@ -18,7 +18,7 @@ The settings available and their default values are :
 The server addresses MUST contain the forward slash at the end.
 
 To configure the client pass the desired keyword arguments to the client.configure() method like so:
-client.configure(chatver=0x0E, invis=True)
+client.configure(chatver=15, invis=True)
 
 Exceptions
 ------------------------------------
@@ -39,7 +39,7 @@ ChatServerError will be raised when communicating with the chat server, this inc
 
 The error code id's are assigned as the following.
 
-000 -> 100 : N/A
+000 -> 100 : Not yet assigned
 100 -> 200 : MasterServerError
 200 -> 300 : ChatServerError
 
@@ -59,6 +59,10 @@ The available error codes at the current time are as follows.
 110 : 'Connection reset by peer'
 111 : 'Connection refused'
 112 : 'Connection timed out'
+120 : 'No buddies found'
+121 : 'No ban list found'
+122 : 'No ignored users found'
+123 : 'No clan members found'
 
 200 : 'Chat server did not respond to authentication request.'
 201 : 'Connection to the chat server timed out.'
@@ -66,4 +70,5 @@ The available error codes at the current time are as follows.
 203 : 'Failed to connect to the chat server after 3 attempts.'
 204 : 'Empty packet received.'
 205 : 'No cookie/auth hash provided.'
+206 : 'Broken Pipe, is the chat version correct?'
 

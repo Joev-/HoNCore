@@ -156,6 +156,8 @@ def parse_initial_status(packet):
 			
 			if nick != "":
 				# Check for a name because sometimes my own account id is in the list of online buddies, why?
+				# Above message is no longer valid, and this should be revised, the logged in user's name is in the list whenever they
+				# are in a clan because this user data contains data for clan members and buddies.
 				# user.updateStatus(nick)
 				if gamename is not "":
 					print(nick + " is online and in the game " + gamename)
