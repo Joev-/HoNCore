@@ -13,7 +13,7 @@ def id2nick(bid):
 	""" Provide a user's nick instead of their ID. Purely visual, useful for notifications.
 		TODO: Modify so it can find either a buddy or clan member.
 	"""
-	for user in account.buddylist:
+	for user in account.buddy_list:
 		if bid == user.buddy_id:
 			if user.clantag != "":
 				clantag = "[" + user.clantag + "]"
@@ -28,7 +28,7 @@ def set_status(nick, server, gamename, status):
 		Some data like server and game name are not stored... Buuuut, they could be.
 	"""
 	global account
-	for user in account.buddylist:
+	for user in account.buddy_list:
 		if user.nickname == nick:
 			user.status = status
 
