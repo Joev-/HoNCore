@@ -1,13 +1,14 @@
-import sys, struct, socket, time
+import sys, struct, socket, time, Queue
 import requester, packet, deserialise, user
 from exceptions import *
 
-config_defaults = {"chatport" : 11031,"chatver" : 0x0F,"invis" : False}
+config_defaults = {"chatport" : 11031, "chatver" : 0x0F, "invis" : False}
 
 class HoNClient:	
 	def __init__(self):
 		self.config = config_defaults
 		self.chat_socket = None
+		self.bucket = Queue.Queue() # Stores exceptions
 
 	def configure(self, *args, **kwargs):
 		config_map = {
@@ -23,10 +24,7 @@ class HoNClient:
 			if kwarg in config_map:
 				config_map[kwarg][kwarg] = kwargs[kwarg]
 
-	""" Account related functions
-		* login
-		* logout
-	"""
+	""" Account related functions. """
 	def login(self, username, password):
 		""" HTTP login request.
 			Catches the following:
@@ -97,7 +95,6 @@ class HoNClient:
 		if user.account == None: return False
 		return user.account.logged_in
 
-
 	""" Chatserver related functions"""
 	def chat_connect(self):
 		""" Creates a socket and sends the initial authentication request to the chatserver.
@@ -110,10 +107,10 @@ class HoNClient:
 		if user.account == None or user.account.cookie == None or user.account.auth_hash == None:
 			raise ChatServerError(205)
 		
-		self.chat_socket = packet.ChatSocket(user.account.chat_url, self.config['chatport'])
+		self.chat_socket = packet.ChatSocket()
 
 		try:
-			self.chat_socket.connect() # Basic connection to the socket
+			self.chat_socket.connect(user.account.chat_url, self.config['chatport']) # Basic connection to the socket
 		except ChatServerError:
 			raise # Re-raise the exception
 		
@@ -126,7 +123,7 @@ class HoNClient:
 				break
 			except ChatServerError, e:
 				if attempts == 3:
-					s.connected = False # Make sure this is set.
+					self.chat_socket.connected = False # Make sure this is set.
 					if e.code == 206: # Broken Pipe, want to see the message because it's important!
 						raise
 					else:
@@ -138,7 +135,7 @@ class HoNClient:
 		self.chat_socket.connected = True
 
 		# Start listening for packets from the chat server.
-		listener = packet.Listener(self.chat_socket)
+		listener = packet.Listener(self.chat_socket, self.bucket)
 		listener.daemon = True
 		listener.start()
 
@@ -147,13 +144,25 @@ class HoNClient:
 		""" Disconnect gracefully from the chat server and close and remove the socket."""
 		if self.chat_socket:
 			self.chat_socket.connected = False # Safer to stop the thread with this first.
-			self.chat_socket.socket.shutdown(socket.SHUT_RDWR)
-			self.chat_socket.socket.close()
-			self.chat_socket = None
+
+			try:
+				self.chat_socket.socket.shutdown(socket.SHUT_RDWR)
+				self.chat_socket.socket.close()
+			except socket.error:
+				self.chat_socket = None
+				raise ChatServerError(209)
+			finally:
+				self.chat_socket = None
 
 	def is_connected(self):
 		""" Test for chat server connection """
-		return self.chat_socket.is_connected()
+		try:
+			exception = self.bucket.get(block=False)
+		except Queue.Empty:
+			if not self.chat_socket: return False
+			return self.chat_socket.is_connected()
+		else:
+			raise exception
 
 	""" Message of the day related functions"""
 

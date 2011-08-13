@@ -65,4 +65,7 @@ errormap = {
 	204 : 'Empty packet received.',
 	205 : 'No cookie/auth hash provided.',
 	206 : 'Broken Pipe, is the chat version correct?',
+    207 : 'Chat server error, connection lost.',
+    208 : 'Could not connect to the chat server.',
+    209 : 'Socket was not connected.',
 }

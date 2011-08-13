@@ -30,21 +30,29 @@ class Listener(threading.Thread):
 	the packet parser, which then feeds the packet into any registered event
 	and packet handlers.
 	"""
-	def __init__(self, chat_socket):
+	def __init__(self, chat_socket, bucket):
 		threading.Thread.__init__(self)
 		self._stop = threading.Event()
 		self.chat_socket = chat_socket
 		self.socket = chat_socket.socket
+		self.bucket = bucket
 	
 	def run(self):
-		try:
-			while self.chat_socket.is_connected():
+		while self.chat_socket.is_connected():
+			try:
 				packet = self.socket.recv(512)
-				self.parse(packet)	
-			self.stop()
-		except socket.timeout:
-			raise ChatServerError(201)
-	
+				if len(packet) > 0:
+					self.parse(packet)
+				time.sleep(1)
+			except socket.timeout:
+				self.bucket.put(ChatServerError(201))
+			except socket.error:
+				self.bucket.put(ChatServerError(207))
+			except Exception:
+				print sys.exc_info()
+				#self.chat_socket.connected = False
+		self.stop()
+
 	def stop(self):
 		self._stop.set()
 
@@ -87,20 +95,20 @@ class Listener(threading.Thread):
 			pass
 
 class ChatSocket:
-	def __init__(self, chat_url, chat_port):
+	def __init__(self):
 		self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		self.connected = False
-		self.chat_url = chat_url
-		self.chat_port = chat_port
 
-	def connect(self):
+	def connect(self, chat_url, chat_port):
 		socket.setdefaulttimeout(61)
 		try:
-			self.socket.connect((self.chat_url, self.chat_port))
+			self.socket.connect((chat_url, chat_port))
 		except socket.timeout:
 			raise ChatServerError(201)
-		except socket.error:
-			raise
+		except socket.error, e:
+			if e.errno == 110:
+				raise ChatServerError(201)
+			raise ChatServerError(208) 
 	
 	def is_connected(self):
 		return self.connected
