@@ -167,7 +167,7 @@ class HoNClient:
 			raw = deserialise.parse_raw(raw)['data']
 		except ValueError:
 			raise MasterServerError(108)
-		return motd_parse(raw)
+		return self.motd_parse(raw)
 
 	def motd_parse(self, raw):
 		""" 
