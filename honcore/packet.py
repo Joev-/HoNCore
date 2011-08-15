@@ -43,6 +43,7 @@ class Listener(threading.Thread):
                 packet = self.socket.recv(512)
                 if not packet:
                     self.bucket.put(ChatServerError(207))
+                    break
                 self.parse(packet)
                 time.sleep(1)
             except socket.timeout:
