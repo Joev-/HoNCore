@@ -42,14 +42,17 @@ class Listener(threading.Thread):
             try:
                 packet = self.socket.recv(512)
                 if not packet:
+                    print "No packet received, placing into the bucket!"
                     self.bucket.put(ChatServerError(207))
                     break
                 self.parse(packet)
                 time.sleep(1)
             except socket.timeout:
                 self.bucket.put(ChatServerError(201))
+                break
             except socket.error:
                 self.bucket.put(ChatServerError(207))
+                break
         self.chat_socket.connected = False
         self.stop()
 
@@ -110,8 +113,7 @@ class ChatSocket:
                 raise ChatServerError(201)
             raise ChatServerError(208) 
     
-    def is_connected(self):
-        
+    def is_connected(self):        
         return self.connected
 
     def send_auth(self, account_id, cookie, ip, auth_hash, chatver, invis):

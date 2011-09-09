@@ -54,6 +54,8 @@ errormap = {
 	110 : 'Connection reset by peer', # Good sign it's down, it's dropping connections?
 	111 : 'Connection refused', # Very good sign it's down, it's refusing connections?
 	112 : 'Connection timed out',
+    113 : 'Message of the day data error',
+    114 : 'No address associate with hostname',
 	120 : 'No buddies found',
 	121 : 'No ban list found',
 	122 : 'No ignored users found',

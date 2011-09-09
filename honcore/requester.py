@@ -5,7 +5,7 @@ from httplib import BadStatusLine
 config = {
 	"masterserver" : "http://masterserver.hon.s2games.com/", 
 	"basicserver" : "http://heroesofnewerth.com/", 
-	"honver" : "2.1.0.1"
+	"honver" : "2.1.8.0"
 }
 
 header = { 'User-Agent' : "S2 Games/Heroes of Newerth/" + config['honver'] + "/lac/x86-biarch" }
@@ -41,6 +41,8 @@ def httpget(base, url):
 			raise MasterServerError(111)
 		elif code == "timed out":
 			raise MasterServerError(112)
+		elif code == -5:
+			raise MasterServerError(114)
 		else:
 			print e
 			print code

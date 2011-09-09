@@ -2,7 +2,7 @@ import sys, struct, socket, time, Queue
 import requester, packet, deserialise, user
 from exceptions import *
 
-config_defaults = {"chatport" : 11031, "chatver" : 0x0F, "invis" : False}
+config_defaults = {"chatport" : 11031, "chatver" : 17, "invis" : False}
 
 class HoNClient:    
     def __init__(self):
@@ -86,6 +86,7 @@ class HoNClient:
                         # Force the logout and raise the error
                         user.account.logged_in = False
                         raise   # Re-raise the last exception given
+                        break
                     timeout = pow(2, attempts)
                     time.sleep(timeout)
                     attempts += 1
@@ -202,6 +203,10 @@ class HoNClient:
         motd_list = []
         entries = raw.split("|")
         for entry in entries:
-            title, body, author, date = entry.split("`")
-            motd_list.append({"title" : title, "author" : author, "date" : date, "body" : body})
+            try:
+                title, body, author, date = entry.split("`")
+                motd_list.append({"title" : title, "author" : author, "date" : date, "body" : body})
+            except ValueError:
+                raise MasterServerError(113) # Motd data error
         return motd_list
+
