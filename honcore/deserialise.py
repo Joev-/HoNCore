@@ -34,35 +34,36 @@ def parse_raw(raw):
 	return phpd.loads(raw)
 
 def parse(raw):
-	data = phpd.loads(raw)
+    try:
+    	data = phpd.loads(raw)
+    except: ValueError, e:
+        if e == 'unexpected opcode':
+            raise MasterServerError(108)
 	
 	if 'auth' in data:
 		raise MasterServerError(102)
 	
 	get_basic_info(data)
-	try:
-		try:
-			get_buddies(data['buddy_list'])
-		except KeyError:
-			user.account.buddy_list = {}
-		
-		try:
-			get_banned_list(data['banned_list'])
-		except KeyError:
-			user.account.ban_list = {}
+    try:
+        get_buddies(data['buddy_list'])
+    except KeyError:
+        user.account.buddy_list = {}
+    
+    try:
+        get_banned_list(data['banned_list'])
+    except KeyError:
+        user.account.ban_list = {}
 
-		try:
-			get_ignore_list(data['ignored_list'])
-		except KeyError:
-			user.account.ignore_list = {}
-		
-		try:
-			get_clan_memebrs(data['clan_member_info'])
-		except KeyError:
-			# raise MasterServerError(123)
-			pass
-	except ValueError:
-		raise MasterServerError(108)
+    try:
+        get_ignore_list(data['ignored_list'])
+    except KeyError:
+        user.account.ignore_list = {}
+    
+    try:
+        get_clan_memebrs(data['clan_member_info'])
+    except KeyError:
+        # raise MasterServerError(123)
+        pass
 	
 	return True
 
