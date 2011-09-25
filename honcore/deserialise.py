@@ -14,36 +14,36 @@ is a case to be solved.
 If a user does not have any buddies then the buddy array is structured as follows.
 
 buddy {
-	error {
-		"No buddies found" 
-	}
+    error {
+        "No buddies found" 
+    }
 }
 
 If a user has a buddy then it is structured as the following.
 
 buddy_list {
-	<account_id> {
-		<buddy_data_array>
-	}
+    <account_id> {
+        <buddy_data_array>
+    }
 }
 
 """
 
 def parse_raw(raw):
-	""" Takes raw serialised data and returns raw non-serialised data """
-	return phpd.loads(raw)
+    """ Takes raw serialised data and returns raw non-serialised data """
+    return phpd.loads(raw)
 
 def parse(raw):
     try:
-    	data = phpd.loads(raw)
-    except: ValueError, e:
+        data = phpd.loads(raw)
+    except ValueError, e:
         if e == 'unexpected opcode':
             raise MasterServerError(108)
-	
-	if 'auth' in data:
-		raise MasterServerError(102)
-	
-	get_basic_info(data)
+    
+    if 'auth' in data:
+        raise MasterServerError(102)
+    
+    get_basic_info(data)
     try:
         get_buddies(data['buddy_list'])
     except KeyError:
@@ -64,32 +64,32 @@ def parse(raw):
     except KeyError:
         # raise MasterServerError(123)
         pass
-	
-	return True
+    
+    return True
 
 def get_basic_info(data):
-	try:
-		user.account = user.Account(int(data['super_id']), int(data['account_id']), data['nickname'], data['cookie'], data['auth_hash'], data['chat_url'], data['ip'])
-	except KeyError, e:
-		raise MasterServerError(101, "KeyError", e)
-	
+    try:
+        user.account = user.Account(int(data['super_id']), int(data['account_id']), data['nickname'], data['cookie'], data['auth_hash'], data['chat_url'], data['ip'])
+    except KeyError, e:
+        raise MasterServerError(101, "KeyError", e)
+    
 def get_buddies(buddylist):
-	""" NOTE: It is not possible to get flag and status here. """
-	for userKey in buddylist:
-		accid = buddylist[userKey]['account_id']
-		buddyid = buddylist[userKey]['buddy_id']
-		nick = buddylist[userKey]['nickname']
-		clantag = buddylist[userKey]['clan_tag'] or ""
-		clanname = buddylist[userKey]['clan_name']
+    """ NOTE: It is not possible to get flag and status here. """
+    for userKey in buddylist:
+        accid = buddylist[userKey]['account_id']
+        buddyid = buddylist[userKey]['buddy_id']
+        nick = buddylist[userKey]['nickname']
+        clantag = buddylist[userKey]['clan_tag'] or ""
+        clanname = buddylist[userKey]['clan_name']
 
-		buddy = user.User(accid, nick, buddy_id=buddyid, clan_tag=clantag, clan_name=clanname, status=0, flag=0)
-		user.account.buddy_list[accid] = buddy
+        buddy = user.User(accid, nick, buddy_id=buddyid, clan_tag=clantag, clan_name=clanname, status=0, flag=0)
+        user.account.buddy_list[accid] = buddy
 
 def get_banned_list(data):
-	pass
+    pass
 
 def get_ignore_list(data):
-	pass
+    pass
 
 def get_clan_memebrs(data):
-	pass
+    pass

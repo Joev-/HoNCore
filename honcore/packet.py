@@ -24,34 +24,29 @@ HON_NOTIFICATION_BUDDY_ACCEPTED   = 0x02
 HON_NOTIFICATION_REMOVED_AS_BUDDY = 0x03
 HON_NOTIFICATION_BUDDY_REMOVED    = 0x04
 
-class Listener(threading.Thread):
+class SocketListener(threading.Thread):
     """ 
     Listener class, listens on a socker for packets, sends those packets to
     the packet parser, which then feeds the packet into any registered event
     and packet handlers.
     """
-    def __init__(self, chat_socket, bucket):
+    def __init__(self, chat_socket):
         threading.Thread.__init__(self)
         self._stop = threading.Event()
         self.chat_socket = chat_socket
         self.socket = chat_socket.socket
-        self.bucket = bucket
     
     def run(self):
-        while self.chat_socket.is_connected():
+        while self.chat_socket.is_connected:
             try:
                 packet = self.socket.recv(512)
                 if not packet:
-                    print "No packet received, placing into the bucket!"
-                    self.bucket.put(ChatServerError(207))
                     break
                 self.parse(packet)
                 time.sleep(1)
             except socket.timeout:
-                self.bucket.put(ChatServerError(201))
                 break
             except socket.error:
-                self.bucket.put(ChatServerError(207))
                 break
         self.chat_socket.connected = False
         self.stop()
@@ -104,17 +99,35 @@ class ChatSocket:
         self.connected = False
 
     def connect(self, chat_url, chat_port):
+        """ 
+        Opens a socket connection to the url and port provided from the authentication
+        server.
+        """
         try:
             self.socket.connect((chat_url, chat_port))
         except socket.timeout:
-            raise ChatServerError(201)
+            raise HoNCoreError(11) # Socket timed out
         except socket.error, e:
             if e.errno == 110:
-                raise ChatServerError(201)
-            raise ChatServerError(208) 
+                raise HoNCoreError(11) # Socket timed out
+            raise HoNCoreError(10) # Socket error
     
+    def disconnect(self):
+        """ Disconnect gracefully from the socket and close the socket down. """
+        try:
+            self.socket.shutdown(socket.SHUT_RDWR)
+            self.socket.close()
+        except socket.error:
+            raise HoNCoreError(10)
+        self.connected = False
+
+    @property
     def is_connected(self):        
         return self.connected
+
+    def get_local_port(self):
+        addr, port = self.socket.getsockname()
+        return port 
 
     def send_auth(self, account_id, cookie, ip, auth_hash, chatver, invis):
         """ Sends the initial authentication packet to the chat server and parses the 

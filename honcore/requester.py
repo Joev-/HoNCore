@@ -2,13 +2,6 @@ import hashlib, urllib2
 from exceptions import *
 from httplib import BadStatusLine
 
-config = {
-	"masterserver" : "http://masterserver.hon.s2games.com/", 
-	"basicserver" : "http://heroesofnewerth.com/", 
-	"honver" : "2.1.8.0"
-}
-
-header = { 'User-Agent' : "S2 Games/Heroes of Newerth/" + config['honver'] + "/lac/x86-biarch" }
 
 """ 
 Sends requests to the HoN master servers.
@@ -18,91 +11,101 @@ A version of '2.1.0' forced the connection to be dropped by the server, changing
 must be 4 digits..
 
 TODO:
-	 * If sending a logout request times out then it's a bit... confusing as to what's going on. Could need cleaning up.
+     * If sending a logout request times out then it's a bit... confusing as to what's going on. Could need cleaning up.
 
 """
+_config_defaults = {
+    "masterserver" : "http://masterserver.hon.s2games.com/", 
+    "basicserver" : "http://heroesofnewerth.com/", 
+    "version": "2.1.10.0"
+}
 
-def httpget(base, url):
-	url = base + url
-	req = urllib2.Request(url, None, header)
-	try:
-		response = urllib2.urlopen(req, timeout=20)
-		return response.read()
-	except urllib2.HTTPError, e:
-		# TODO : Find out what errors to catch.
-		print e.code
-		print e.read()
-		raise MasterServerError(107)
-	except urllib2.URLError, e:
-		code = e.reason[0]
-		if code == 104: # Connection reset by peer
-			raise MasterServerError(110)
-		elif code == 111:
-			raise MasterServerError(111)
-		elif code == "timed out":
-			raise MasterServerError(112)
-		elif code == -5:
-			raise MasterServerError(114)
-		else:
-			print e
-			print code
-			raise MasterServerError(107)
-	except BadStatusLine, e:
-		raise MasterServerError(109, e)
+class Requester:
+    def __init__(self):
+        self.config = _config_defaults
 
-def httpost(url):
-	""" When should POST be used VS GET?"""
-	pass
+    def httpget(self, base, url):
+        url = base + url
+        header = { 'User-Agent' : "S2 Games/Heroes of Newerth/%s/lac/x86-biarch" % self.config["version"]}
+        req = urllib2.Request(url, None, header)
+        try:
+            response = urllib2.urlopen(req, timeout=20)
+            return response.read()
+        except urllib2.HTTPError, e:
+            # TODO : Find out what errors to catch.
+            print e.code
+            print e.read()
+            raise MasterServerError(107)
+        except urllib2.URLError, e:
+            code = e.reason[0]
+            if code == 104: # Connection reset by peer
+                raise MasterServerError(110)
+            elif code == 111:
+                raise MasterServerError(111)
+            elif code == "timed out":
+                raise MasterServerError(112)
+            elif code == -5:
+                raise MasterServerError(114)
+            else:
+                print e
+                print code
+                raise MasterServerError(107)
+        except BadStatusLine, e:
+            raise MasterServerError(109, e)
 
-def login(username, password):
-	""" Requests basic information about the user's account """
-	url = "client_requester.php?f=auth&login=%s&password=%s" % (username, password)
-	return httpget(config['masterserver'], url)
+    def httpost(self, url):
+        """ WHY """
+        pass
 
-def logout(cookie):
-	""" 
-	Sends a logout 'request'. 
-	Returns a:2:{i:0;b:1;s:12:"client_disco";s:2:"OK";} on a successful logout.
-	"""
-	url = "client_requester.php?f=logout&cookie=%s" % cookie 
-	return httpget(config['masterserver'], url)
+    def login(self, username, password):
+        """ Requests basic information about the user's account """
+        url = "client_requester.php?f=auth&login=%s&password=%s" % (username, password)
+        return self.httpget(self.config['masterserver'], url)
 
-def motd():
-	""" Requests the message of the day list from the server.
-		Contains the last 6 message of the day(s??) Messages of the day?.
-	"""
-	url = "/gen/client_motd2.php?data=retrieve"
-	return httpget(config['basicserver'], url) 
-	
-def server_list(cookie, gametype):
-	pass
+    def logout(self, cookie):
+        """ 
+        Sends a logout 'request'. 
+        Returns a:2:{i:0;b:1;s:12:"client_disco";s:2:"OK";} on a successful logout.
+        """
+        url = "client_requester.php?f=logout&cookie=%s" % cookie 
+        return self.httpget(self.config['masterserver'], url)
 
-def nick2id(nickname):
-	pass
+    def motd(self):
+        """ Requests the message of the day list from the server.
+            Contains the last 6 message of the day(s??) Messages of the day?.
+        """
+        url = "/gen/client_motd3.php?data=retrieve"
+        return self.httpget(self.config['basicserver'], url) 
+        
+    def server_list(self, cookie, gametype):
+        pass
 
-def new_buddy(cookie, aid, bid):
-	pass
+    def nick2id(self, nickname):
+        pass
 
-def remove_buddy(cookie, aid, bid):
-	pass
+    def new_buddy(self, cookie, aid, bid):
+        pass
 
-def new_banned(cookie, aid, bid, reason):
-	pass
+    def remove_buddy(self, cookie, aid, bid):
+        pass
 
-def remove_banned(cookie, aid, bid, reason):
-	pass
+    def new_banned(self, cookie, aid, bid, reason):
+        pass
 
-def new_ignored(cookie, aid, iid, reason):
-	pass
+    def remove_banned(self, cookie, aid, bid, reason):
+        pass
 
-def remove_ignored(cookie, aid, iid, reason):
-	pass
+    def new_ignored(self, cookie, aid, iid, reason):
+        pass
 
-def stats_request(aid):
-	pass
+    def remove_ignored(self, cookie, aid, iid, reason):
+        pass
 
-def stats_request_ranked(aid):
-	pass
+    def stats_request(self, aid):
+        pass
 
-def patcher(version, os, arch):
-	pass
+    def stats_request_ranked(self, aid):
+        pass
+
+    def patcher(self, version, os, arch):
+        pass
