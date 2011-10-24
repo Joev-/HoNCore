@@ -8,7 +8,7 @@ __all__ = ['HoNClient']
 
 _config_defaults = {
     "chatport" : 11031, 
-    "chatver" : 18, 
+    "protocol" : 19, 
     "invis" : False,
 }
 
@@ -22,7 +22,7 @@ class HoNClient(object):
     def _configure(self, *args, **kwargs):
         config_map = {
             "chatport" : self.config,
-            "chatver" : self.config,
+            "protocol" : self.config,
             "invis" : self.config,
             "masterserver" : self.__requester.config,
             "basicserver" : self.__requester.config,
@@ -122,11 +122,13 @@ class HoNClient(object):
                 raise ChatServerError(201)
             
         # Send initial authentication request to the chat server.
-        # If the chat server did not respond to the auth request then increment the chatver.
+        # TODO: If the chat server did not respond to the auth request then increment the chat protocol version.
+        # Maybe should be handled by the true client. It would be nice for HoNStatus to be able to see that the protocol was incremented..
+        # However maybe it's not so important because I should check it each patch regardless.
         attempts = 1
         while True:
             try:
-                self.__chat_socket.send_auth(user.account.account_id, user.account.cookie, user.account.ip, user.account.auth_hash, self.config['chatver'], self.config['invis'])
+                self.__chat_socket.send_auth_info(user.account.account_id, user.account.cookie, user.account.ip, user.account.auth_hash, self.config['protocol'], self.config['invis'])
                 break
             except ChatServerError, e:
                 if attempts == 3:
@@ -170,8 +172,8 @@ class HoNClient(object):
     def is_connected(self):
         """ 
         Test for chat server connection. 
-        Once a user is logged in to hon, they can be logged in but not connected.
-        This would happen if a chat server connection is dropped unexpectedly.
+        Once a user is logged in to a HoN client, they can be logged in but not connected.
+        This would happen if a chat server connection is dropped unexpectedly or is never initialised.
         The main program would use this to check for that and then handle it itself.
         """
         # Check the socket exists.

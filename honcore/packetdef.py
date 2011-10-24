@@ -83,14 +83,17 @@ HON_CS_CLAN_ADD_MEMBER          = 0x47
 HON_CS_CHANNEL_EMOTE    		= 0x65
 HON_CS_BUDDY_ACCEPT				= 0xB3
 
-""" English translations for events 
+# Dummy Events / Custom events?
+HON_SC_PACKET_RECV              = "HON_SC_PACKET_RECV"
+
+""" English translations for events. 
 	
 	Available events
 	* ping
 	* total_online
+    * whisper
 
 """
-
 socket_events = {
 	HON_SC_INITIAL_STATUS : "initial_status",
 	HON_SC_PING : "ping",

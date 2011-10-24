@@ -53,6 +53,7 @@ class ChatServerError(HoNException):
 _errormap = {
     10  : 'Socket error.',
     11  : 'Socket timed out.',
+    12  : 'Unknown packet received',
     100 : 'Could not connect to the masterserver.',
     101 : 'Could not obtain login data.',
     102 : 'Incorrect username/password.',
