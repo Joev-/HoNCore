@@ -1,7 +1,8 @@
 import sys, struct, socket, time
 import deserialise, user, handler
 from requester import Requester
-from packet import (SocketListener, ChatSocket)
+from networking import ChatSocket
+from packetdef import *
 from exceptions import *
 
 __all__ = ['HoNClient']
@@ -15,9 +16,23 @@ _config_defaults = {
 class HoNClient(object):    
     def __init__(self):
         self.config = _config_defaults
-        self.__chat_socket = None
+        self.events = {}
+        self.__create_events()
+        self.__chat_socket = ChatSocket(self.events)
         self.__listener = None
         self.__requester = Requester()
+
+    def __create_events(self):
+        """ Create each event that can be triggered by the client. """
+        self.events[HON_SC_AUTH_ACCEPTED] = Event("Auth Accepted", HON_SC_AUTH_ACCEPTED)
+        self.events[HON_SC_PING] = Event("Ping", HON_SC_PING)
+        self.events[HON_SC_CHANNEL_MSG] = Event("Channel Message", HON_SC_CHANNEL_MSG)
+        self.events[HON_SC_CHANGED_CHANNEL] = Event("Changed Channel", HON_SC_CHANGED_CHANNEL)
+        self.events[HON_SC_JOINED_CHANNEL] = Event("Joined Channel", HON_SC_JOINED_CHANNEL)
+        self.events[HON_SC_LEFT_CHANNEL] = Event("Left Channel", HON_SC_LEFT_CHANNEL)
+        self.events[HON_SC_WHISPER] = Event("Whisper", HON_SC_WHISPER)
+    
+        self.events[HON_SC_TOTAL_ONLINE] = Event("Total Online", HON_SC_TOTAL_ONLINE)
 
     def _configure(self, *args, **kwargs):
         config_map = {
@@ -110,9 +125,9 @@ class HoNClient(object):
         """
         if user.account == None or user.account.cookie == None or user.account.auth_hash == None:
             raise ChatServerError(205)
-        
-        # Initialise the chat socket
-        self.__chat_socket = ChatSocket()
+       
+        if self.__chat_socket is None:
+            self.__chat_socket = ChatSocket(self.events)
         try:
             self.__chat_socket.connect(user.account.chat_url, self.config['chatport']) # Basic connection to the socket
         except HoNCoreError as e:
@@ -125,29 +140,23 @@ class HoNClient(object):
         # TODO: If the chat server did not respond to the auth request then increment the chat protocol version.
         # Maybe should be handled by the true client. It would be nice for HoNStatus to be able to see that the protocol was incremented..
         # However maybe it's not so important because I should check it each patch regardless.
-        attempts = 1
-        while True:
-            try:
-                self.__chat_socket.send_auth_info(user.account.account_id, user.account.cookie, user.account.ip, user.account.auth_hash, self.config['protocol'], self.config['invis'])
-                break
-            except ChatServerError, e:
-                if attempts == 3:
-                    self.__chat_socket.connected = False # Make sure this is set.
-                    if e.code == 206: # Broken Pipe, want to see the message because it's important!
-                        raise
-                    else:
-                        raise ChatServerError(203)
-                timeout = pow(2, attempts)
-                time.sleep(timeout)
-                attempts += 1
-
-        self.__chat_socket.connected = True
-
-        # Start listening for packets from the chat server.
-        self.__listener = SocketListener(self.__chat_socket)
-        self.__listener.daemon = True
-        self.__listener.start()
-
+        #attempts = 1
+        #while True:
+            #try:
+                #self.__chat_socket.send_auth_info(user.account.account_id, user.account.cookie, user.account.ip, user.account.auth_hash, self.config['protocol'], self.config['invis'])
+                #break
+            #except ChatServerError, e:
+                #if attempts == 3:
+                    #self.__chat_socket.connected = False # Make sure this is set.
+                    #if e.code == 206: # Broken Pipe, want to see the message because it's important!
+                        #raise
+                    #else:
+                        #raise ChatServerError(203)
+                #timeout = pow(2, attempts)
+                #time.sleep(timeout)
+                #attempts += 1
+        #self.__chat_socket.connected = True
+        self.__chat_socket.send_auth_info(user.account.account_id, user.account.cookie, user.account.ip, user.account.auth_hash,  self.config['protocol'], self.config['invis'])
 
     def _chat_disconnect(self):
         """ Disconnect gracefully from the chat server and close and remove the socket."""
@@ -158,8 +167,8 @@ class HoNClient(object):
                 self.__chat_socket.socket.close()
             except socket.error:
                 raise ChatServerError(209)
-            finally:
-                self.__chat_socket = None
+            #finally:
+                #self.__chat_socket = None
 
     @property
     def is_logged_in(self):
@@ -236,4 +245,60 @@ class HoNClient(object):
         motd['server_data'] = raw['serverdata']
         motd['honcast'] = raw['honcast']
         return motd
+
+class Event:
+    """
+    Event objects represent network level events which can have functions connected to them, which
+    are then triggered when the event occurs.
+
+    A standard set of events are initialised by the library which should cover nearly everything.
+    The core client will store a list of the standard events in client.events.
+
+    The front end client should then connect these events to functions by calling the connect 
+    method on the specific event object. e.g.
+
+    self.events.login.connect(self.on_login_event)
+
+    The functions are stored in a list called handlers, each function is ran when the event is triggered.
+
+    On the networking side, the events are triggered after the packet data has been parsed and constructed into useful data.
+    The process would be as follows:
+    
+        packet = sock.recv(512)
+        id = parse_id(packet)
+        useful_data = raw_parse(id, packet)
+        event.trigger(useful_data)
+
+    """
+    def __init__(self, name, packet_id):
+        self.name = name            # An english, human name for the event. Maybe it can be used for a lookup later. Not sure of a use for it right now.
+        self.packet_id = packet_id  # A packet identifier, either a constant or a hex value of a packet. i.e HON_SC_TOTAL_ONLINE or 0x68.
+        self.handlers = []          # List of connected handlers.
+    
+    def __repr__(self):
+        return "<%s: %s>" % (self.packet_id, self.name)
+    
+    def connect(self, function):
+        """
+        Connects a function to a specific event.
+        The event is given as an english name, which corresponds
+        to a constant in the packet definition file.
+        """
+        self.handlers.append(function)
+
+    def disonnect(self, function):
+        """
+        Hopefully it can be used to remove event handlers from this event
+        object so they are no longer triggered. Useful if say, an event only 
+        needs to be fired once, for a reminder or such.
+        """
+        pass
+    
+    def trigger(self, **data):
+        """
+        Call each event handler function in the list and pass the keyword argument based data to it.
+        """
+        for f in self.handlers:
+            num_args = f.func_code.co_argcount
+            f(**data) if num_args > 0 else f()
 
