@@ -1,5 +1,5 @@
 import sys, struct, socket, time
-import deserialise, user, handler
+import deserialise, user
 from requester import Requester
 from networking import ChatSocket
 from packetdef import *
@@ -21,6 +21,7 @@ class HoNClient(object):
         self.__chat_socket = ChatSocket(self.events)
         self.__listener = None
         self.__requester = Requester()
+        self.account = None
 
     def __create_events(self):
         """ Create each event that can be triggered by the client. """
@@ -31,6 +32,9 @@ class HoNClient(object):
         self.events[HON_SC_JOINED_CHANNEL] = Event("Joined Channel", HON_SC_JOINED_CHANNEL)
         self.events[HON_SC_LEFT_CHANNEL] = Event("Left Channel", HON_SC_LEFT_CHANNEL)
         self.events[HON_SC_WHISPER] = Event("Whisper", HON_SC_WHISPER)
+        self.events[HON_SC_PM] = Event("Private Message", HON_SC_PM)
+
+        self.events[HON_SC_MESSAGE_ALL] = Event("Server Message", HON_SC_MESSAGE_ALL)
     
         self.events[HON_SC_TOTAL_ONLINE] = Event("Total Online", HON_SC_TOTAL_ONLINE)
 
@@ -79,10 +83,12 @@ class HoNClient(object):
 
         # Pass the data to the deserialiser
         try:
-            deserialise.parse(response)
-            user.account.logged_in = True
+            self.account = deserialise.parse(response)
+            self.account.logged_in = True
         except MasterServerError:
             raise MasterServerError(101)
+
+        return True
 
     def _logout(self):
         """ Send a logout request to the masterserver and log out the account.
@@ -92,22 +98,22 @@ class HoNClient(object):
                 * Connection timed out
                 * Connection refused.
         """
-        if user.account == None:
+        if self.account == None:
             return
         
-        if not user.account.cookie:
-            user.account.logged_in = False
+        if not self.account.cookie:
+            self.account.logged_in = False
         else:
             attempts = 0
             while True:
                 try:
                     self.__requester.logout(user.account.cookie)
-                    user.account.logged_in = False
+                    self.account.logged_in = False
                     break
                 except MasterServerError, e:
                     if attempts == 3:
                         # Force the logout and raise the error
-                        user.account.logged_in = False
+                        self.account.logged_in = False
                         raise   # Re-raise the last exception given
                         break
                     timeout = pow(2, attempts)
@@ -116,14 +122,15 @@ class HoNClient(object):
 
     """ Chatserver related functions"""
     def _chat_connect(self):
-        """ Sends the initial authentication request to the chatserver via the chat socket object.
-            Catches the following:
-                * The server responded to the authentication request.
-                * The server did not respond to the authentication request.
-                * Account data mismatch.
-                * Connection to the server timed out.
+        """ 
+        Sends the initial authentication request to the chatserver via the chat socket object.
+        Ensures the user information required for authentication is available, otherwise raises
+        a ChatServerError #205 (No cookie/auth hash provided)
+        If for some reason a ChatSocket does not exist then one is created.
+        Connects that chat socket to the correct address and port. Any exceptions are raised to the top method.
+        Finally sends a valid authentication packet. Any exceptions are raised to the top method.
         """
-        if user.account == None or user.account.cookie == None or user.account.auth_hash == None:
+        if self.account == None or self.account.cookie == None or self.account.auth_hash == None:
             raise ChatServerError(205)
        
         if self.__chat_socket is None:
@@ -140,24 +147,22 @@ class HoNClient(object):
         # TODO: If the chat server did not respond to the auth request then increment the chat protocol version.
         # Maybe should be handled by the true client. It would be nice for HoNStatus to be able to see that the protocol was incremented..
         # However maybe it's not so important because I should check it each patch regardless.
-        #attempts = 1
-        #while True:
-            #try:
-                #self.__chat_socket.send_auth_info(user.account.account_id, user.account.cookie, user.account.ip, user.account.auth_hash, self.config['protocol'], self.config['invis'])
-                #break
-            #except ChatServerError, e:
-                #if attempts == 3:
-                    #self.__chat_socket.connected = False # Make sure this is set.
-                    #if e.code == 206: # Broken Pipe, want to see the message because it's important!
-                        #raise
-                    #else:
-                        #raise ChatServerError(203)
-                #timeout = pow(2, attempts)
-                #time.sleep(timeout)
-                #attempts += 1
-        #self.__chat_socket.connected = True
-        self.__chat_socket.send_auth_info(user.account.account_id, user.account.cookie, user.account.ip, user.account.auth_hash,  self.config['protocol'], self.config['invis'])
-
+        try:
+            self.__chat_socket.send_auth_info(user.account.account_id, user.account.cookie, user.account.ip, user.account.auth_hash,  self.config['protocol'], self.config['invis'])
+        except ChatServerError:
+            raise # Re-raise the exception.
+        
+        # The idea is to give 3 seconds for the chat server to respond to the authentication request.
+        # If it is accepted, then the `is_authenticated` flag will be set to true.
+        attempts = 1
+        while attempts is not 3:
+            if self.__chat_socket.is_authenticated:
+                return True
+            else:
+                time.sleep(1)
+                attempts += 1
+        raise ChatServerError(200) # Server did not respond to the authentication request 
+        
     def _chat_disconnect(self):
         """ Disconnect gracefully from the chat server and close and remove the socket."""
         if self.__chat_socket is not None:
@@ -167,8 +172,6 @@ class HoNClient(object):
                 self.__chat_socket.socket.close()
             except socket.error:
                 raise ChatServerError(209)
-            #finally:
-                #self.__chat_socket = None
 
     @property
     def is_logged_in(self):
@@ -181,6 +184,9 @@ class HoNClient(object):
     def is_connected(self):
         """ 
         Test for chat server connection. 
+        The line of thought here is, the client can not be connected to the chat server
+        until it is authenticated, the chat socket can be connected as long as the server
+        doesn't deny or drop the connection.
         Once a user is logged in to a HoN client, they can be logged in but not connected.
         This would happen if a chat server connection is dropped unexpectedly or is never initialised.
         The main program would use this to check for that and then handle it itself.
@@ -188,12 +194,13 @@ class HoNClient(object):
         # Check the socket exists.
         if self.__chat_socket is None:
             return False
+        # Ensure the user is authenticated against the chat server
+        if self.__chat_socket.is_authenticated is False:
+            return False
         # Check the status of the chat socket object.
         if self.__chat_socket.is_connected is False:
             return False
         # Any other checks to be done..? 
-        # If not it would be better to just return the value of
-        # chat_socket.is_connected
         return True
 
     """ Message of the day related functions"""

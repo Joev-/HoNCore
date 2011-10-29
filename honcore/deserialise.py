@@ -34,6 +34,11 @@ def parse_raw(raw):
     return phpd.loads(raw)
 
 def parse(raw):
+    """
+    Takes raw login data and a user account, extracts useful information
+    from the data and populates the account.
+    """
+
     try:
         data = phpd.loads(raw)
     except ValueError, e:
@@ -43,38 +48,44 @@ def parse(raw):
     if 'auth' in data:
         raise MasterServerError(102)
     
-    get_basic_info(data)
+    account = get_basic_info(data)
     try:
-        get_buddies(data['buddy_list'])
+        account.buddy_list = get_buddies(data['buddy_list'])
     except KeyError:
-        user.account.buddy_list = {}
+        pass
+        #account.buddy_list = {}
     
     try:
-        get_banned_list(data['banned_list'])
+        account.ban_list = get_ban_list(data['banned_list'])
     except KeyError:
-        user.account.ban_list = {}
+        pass
+        #account.ban_list = {}
 
     try:
-        get_ignore_list(data['ignored_list'])
+        account.ignore_list = get_ignore_list(data['ignored_list'])
     except KeyError:
-        user.account.ignore_list = {}
+        pass
+        #account.ignore_list = {}
     
     try:
-        get_clan_memebrs(data['clan_member_info'])
+        account.clan_member_list = get_clan_memebrs(data['clan_member_info'])
     except KeyError:
         # raise MasterServerError(123)
         pass
     
-    return True
+    return account
 
 def get_basic_info(data):
     try:
-        user.account = user.Account(int(data['super_id']), int(data['account_id']), data['nickname'], data['cookie'], data['auth_hash'], data['chat_url'], data['ip'])
+       account = user.Account(int(data['super_id']), int(data['account_id']), data['nickname'], data['cookie'], data['auth_hash'], data['chat_url'], data['ip'])
     except KeyError, e:
-        raise MasterServerError(101, "KeyError", e)
+        raise
+        #raise MasterServerError(101, "KeyError", e)
+    return account
     
 def get_buddies(buddylist):
     """ NOTE: It is not possible to get flag and status here. """
+    buddy_list = {}
     for userKey in buddylist:
         accid = buddylist[userKey]['account_id']
         buddyid = buddylist[userKey]['buddy_id']
@@ -83,13 +94,18 @@ def get_buddies(buddylist):
         clanname = buddylist[userKey]['clan_name']
 
         buddy = user.User(accid, nick, buddy_id=buddyid, clan_tag=clantag, clan_name=clanname, status=0, flag=0)
-        user.account.buddy_list[accid] = buddy
+        buddy_list[accid] = buddy
+    return buddy_list
 
-def get_banned_list(data):
-    pass
+def get_ban_list(data):
+    ban_list = {}
+    return ban_list
 
 def get_ignore_list(data):
-    pass
+    ignore_list = {}
+    return ignore_list
 
 def get_clan_memebrs(data):
-    pass
+    clan_members_list = {}
+    return clan_members_list
+

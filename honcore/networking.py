@@ -1,6 +1,7 @@
 import struct, time, threading, thread, socket
 from exceptions import *
 from packetdef import *
+from user import id2nick
 from lib.construct import *
 
 """ TODO: Update constants """
@@ -45,6 +46,7 @@ class SocketListener(threading.Thread):
                 packet = self.chat_socket.recv(512)
                 if not packet:
                     #print "Empty packet received, socket terminated."
+                    self.stopped = True
                     break
                 #print "Packet 0x%x on socket %s" % (struct.unpack('H', packet[2:4])[0], self.chat_socket.socket)
                 threading.Thread(target=self.chat_socket.parse_packet, name='PacketParser', args=(packet,)).start()
@@ -62,16 +64,35 @@ class ChatSocket:
     This object will be created once with the client, and only one will 
     be maintained, however the socket and listener will be re-created for
     each connection used. GC should pick up the old and unused ones.
+
+    The ChatSocket holds two state flags.
+        `connected` Represents the state of the actual socket.
+        `authenticated` Represents the state of the chat server, and if it 
+                        is happy to communicate.
+    Both states are used to consider if the connection is available.
     """
     def __init__(self, client_events):
         self.socket = None
         self.connected = False
+        self.authenticated = False
         self.listener = None
         self.packet_parser = PacketParser()
         self.events = client_events
 
         # Transparently connect the ping event to the pong sender.
         self.events[HON_SC_PING].connect(self.send_pong)
+
+        # Some internal handling of the authentication process is also needed
+        self.events[HON_SC_AUTH_ACCEPTED].connect(self.on_auth_accepted)
+
+    @property
+    def is_authenticated(self):
+        """ 
+        The ChatSocket becomes authenticated with the Chat Server once
+        the `auth_accepted` packet has been received. The ChatSocket will
+        then be authenticated until the connection is lost.
+        """
+        return self.authenticated
 
     @property
     def is_connected(self): 
@@ -82,7 +103,20 @@ class ChatSocket:
         hanging. This is_connected method needs to be expanded to check for ping
         timeouts possibly, or simply if the socket is still connected or the 
         socket listener is still running.
+
+        28.10.11 -- There seems to be a bug with HoN's chat server. 
+        When two clients wish to connect to the chat server with the same
+        credentials, one will get the connection, while the other will enter
+        a strange loop of "Connecting.... Disconnected.." 
+        The same can be seen using the S2 client and my own clients.
+        The behaviour I remember and would expect is that, since each client's reconnect
+        cycle is staggered by 30 seconds, the connection would ping-poing between the two
+        clients every 30 seconds. Each client would hold the connection for 30 seconds.
         """
+        # The socket has been broken early.
+        if self.listener.stopped is True and self.connected is True:
+            self.connected = False
+            self.authenticated = False
         return self.connected
 
     def connect(self, address, port):
@@ -103,12 +137,23 @@ class ChatSocket:
                 raise HoNCoreError(11) # Socket timed out
             raise HoNCoreError(10) # Socket error
         
+        # The socket is now actually connected.
         self.connected = True
+
+        # Set up a listener as the socket can send data now.
         self.listener = SocketListener(self)
         self.listener.start()
 
     def disconnect(self):
+        """
+        Disconnecting should not fail, it's a pretty forced procedure.
+        Set the internal state of the socket to be disabled, and set
+        authenticated to False.
+        Clear the socket object and listener so they can be dereferenced.
+        """
+
         self.connected = False
+        self.authenticated = False
 
         try:
             self.socket.shutdown(socket.SHUT_RDWR)
@@ -126,6 +171,7 @@ class ChatSocket:
         """ 
         Wrapper send method. 
         TODO: Capture failed sends.
+        TODO: Possibly check for the authentication first, and authenticate if required.
         """
         #print "Sending on socket %s from thread %s" % (self.socket, threading.currentThread().getName())
         try:
@@ -158,13 +204,19 @@ class ChatSocket:
             if e.code == 12: # Unknown packet received.    
                 return False
 
+        if packet_data is None:
+            return
+        
         if packet_id in self.events:
             event = self.events[packet_id]
             event.trigger(**packet_data)
 
+    def on_auth_accepted(self, *p):
+        """ Set the authenticated state to True"""
+        self.authenticated = True
+
     def send_pong(self):
         self.send(struct.pack('H', HON_CS_PONG))
-        #print "Pong sent successfully on socket %s " % self.socket
     
     def send_channel_message(self):
         pass
@@ -370,14 +422,11 @@ class PacketParser:
             raise HoNCoreError(12) # Unknown packet received.
     
     def parse_auth_accepted(self, packet):
-        """
-        The initial response from the chat server to say that the authentication was accepted.
-        """
-        #print "auth accepted event"
+        """ The initial response from the chat server to verify that the authentication was accepted. """
         return {}
 
     def parse_ping(self, packet):
-        """ Replies to a ping request (0x2A00) with a pong response (0x2A01) """
+        """ Pings sent every minute. Respond with pong. """
         return {}
 
     def parse_channel_message(self, packet):
@@ -393,11 +442,15 @@ class PacketParser:
         pass
 
     def parse_whisper(self, packet):
-        """ A normal whisper from anyone """
-        print "Parsing whisper"
+        """ 
+        A normal whisper from anyone.
+        Returns two variables.
+            `player`    The name of the player who sent the whisper.
+            `message`   The full message sent in the whisper
+        """
         c = Struct("packet", ULInt16("size"), ULInt16("packetid"), CString("name"), CString("message"))
         r = c.parse(packet)
-        return {"name" : r.name, "message" : r.message }
+        return {"player" : r.name, "message" : r.message }
 
     def parse_whisper_failed(self, packet):
         pass
@@ -407,11 +460,11 @@ class PacketParser:
         The initial status packet contains information for all available buddy and clan members, 
         as well as some server statuses and matchmaking settings.
         """
-        contact_count = int(struct.unpack_from('I', packet[4:8])[0]) # Tuples?!!
+        contact_count = int(struct.unpack_from('I', packet[4:8])[0]) # Tuples?
         contact_data = packet[8:]
         if contact_count > 0:
             i = 1
-            print("Parsing data for %i contacts." % contact_count)
+            #print("Parsing data for %i contacts." % contact_count)
             while i <= int(contact_count):
                 status = int(struct.unpack_from('B', contact_data[4])[0])
                 nick = ""
@@ -420,14 +473,14 @@ class PacketParser:
                 if status == HON_STATUS_INLOBBY or status == HON_STATUS_INGAME:
                     c = Struct("buddy", ULInt32("buddyid"), Byte("status"), Byte("flag"), CString("server"), CString("gamename"))
                     r = c.parse(contact_data)
-                    nick = user.id2nick(r.buddyid)
+                    nick = id2nick(r.buddyid)
                     flag = str(r.flag)
                     contact_data = contact_data[6 + (len(r.server)+1+len(r.gamename)+1):]
                     gamename = r.gamename
                 else:
                     c = Struct("buddy", ULInt32("buddyid"), Byte("status"), Byte("flag"))
                     r = c.parse(contact_data[:6])
-                    nick = user.id2nick(r.buddyid)
+                    nick = id2nick(r.buddyid)
                     flag = str(r.flag)
                     contact_data = contact_data[6:]
                 
@@ -452,7 +505,15 @@ class PacketParser:
         pass
 
     def parse_private_message(self, packet):
-        pass
+        """ 
+        A private message from anyone.
+        Returns two variables.
+            `player`    The name of the player who sent the whisper.
+            `message`   The full message sent in the whisper
+        """
+        c = Struct("packet", ULInt16("size"), ULInt16("packetid"), CString("name"), CString("message"))
+        r = c.parse(packet)
+        return {"player" : r.name, "message" : r.message }
 
     def parse_private_message_failed(self, packet):
         pass

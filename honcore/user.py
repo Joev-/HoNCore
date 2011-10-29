@@ -6,7 +6,6 @@ These are needed as they are global objects which are created when a response is
 and will be updated in real time. The response contains a big list of buddies, bans, ignores, and other than watching for
 buddy/ignore/ban add/remove packets is the only way to obtain this initial information.
 """
-account = None
 
 """ Functions """
 def id2nick(bid):
@@ -87,14 +86,11 @@ class Account:
         self.auth_hash = auth_hash
         self.chat_url = chat_url
         self.ip = ip
-        # self.contacts = []
         self.buddy_list = {}
         self.ban_list = {}
         self.ignore_list = {}
+        self.clan_member_list = {}
         self.logged_in = False
-
-        global account
-        account = self
 
     def __repr__(self):
         return "<User Account: #%s %s>" % (self.account_id, self.nickname)
@@ -111,4 +107,3 @@ A channel holds the following
 class Channel:
     pass
 
-        
