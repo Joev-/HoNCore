@@ -1,0 +1,56 @@
+Packet ID : 0x05		Name: Entered Channel
+---------------------------------------------------------
+
+This packet is received when another user enters a channel
+that the current user is in.
+
+It contains the following:
+	* User nickname
+	* User account ID
+	* Channel ID
+	* User status
+	* User flags
+	* User chat icon
+	* User nickname text colour
+	* User account icon
+
+Structure
+---------------------------------------------------------
+
+UInt16 - Total packet size
+UInt16 - Packet Identifier
+String - User Nickname
+UInt32 - User Account ID
+UInt32 - Channel ID
+Byte   - User Status
+Byte   - User Flags
+String - User Chat Icon
+String - User Nickname Colour
+String - User Account Icon
+
+Example Structure
+---------------------------------------------------------
+
+Size			002e
+ID				0500
+Nickname		5b46656d5d536d616c6c426f7400
+Account ID		02da4d00
+Channel ID 		1b440000
+User Status 	03
+User Flags 		00
+Flag Icon 		00
+Nickname Colour	776869746500
+Account Icon 	44656661756c742049636f6e00
+
+The above correlates to...
+
+Size 			46
+ID 				0x05
+Nickname 		[Fem]SmallBot
+Account ID		5102082 
+Channel ID 		17435
+User Status 	0x03
+User Flags 		0x00
+Flag Icon 		''
+Nickname Colour	white
+Account Icon 	Default Icon

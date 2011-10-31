@@ -1,0 +1,4 @@
+Packet ID : 0x1C00	Name: Auth Accepted
+---------------------------------------------------------
+
+This is the packet that the Chat Server responds with to confirm that the authentication was accepted.

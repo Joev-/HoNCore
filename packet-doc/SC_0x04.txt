@@ -1,0 +1,82 @@
+Packet ID : 0x04		Name: Joined Channel
+---------------------------------------------------------
+
+This packet is received when the user joins a channel.
+It contains the following:
+	* Channel Name
+	* Channel ID
+	* 1 Unknown Byte
+	* Channel Topic
+	* A count of the operators in the channel
+		For each operator:
+		* Operator ID
+		* Operator Type
+	* A count of the current users in the channel
+		For each user:
+		* Nickname
+		* User status
+		* User flags
+		* User chat icon
+		* Nickname text colour
+		* User icon
+
+Structure
+---------------------------------------------------------
+
+UInt16 - Total packet size
+UInt16 - Packet Identifier
+String - Channel Name
+UInt32 - Channel ID
+Byte   - Unknown byte *
+String - Channel Topic
+UInt32 - Operator Count
+	* UInt32 - Operator's (account?) ID
+	* Byte   - Operator Type*
+UInt32 - User count
+	* String - User Nickname
+	* UInt32 - User Account ID
+	* Byte   - User Status
+	* Byte   - User Flags
+	* String - Chat Icon
+	* String - Nickname Colour
+	* String - Account Icon
+
+Example Structure
+---------------------------------------------------------
+Size			0048
+ID				0400
+C Name			466562656c686f75736500
+C ID			28650000
+Unknown			00
+Topic			00
+Operators		01000000
+Operator AID		02da4d00
+Operator Type		03
+User Count		01000000
+User Nick			5b46656d5d536d616c6c426f7400
+User AID			02da4d00
+User Status			03
+User Flags			00
+User Flag Icon		00
+User Nick Colour	776869746500
+User Account Icon   44656661756c742049636f6e00
+
+The above correlates to...
+
+Size			72
+ID				0x04
+C Name			Febelhouse
+C ID			2262
+Unknown			0
+Topic			''
+Operators		1
+Operator AID		5102082
+Operator Type		3
+User Count		1
+User Nick			[Fem]SmallBot
+User AID			5102082
+User Status			0x03
+User Flags			0x00
+User Flag Icon		''
+User Nick Colour	white
+User Account Icon   Default Icon

@@ -9,8 +9,8 @@ Client version 2.40.2
 HON_SC_AUTH_ACCEPTED			= 0x1C00
 HON_SC_PING						= 0x2A00
 HON_SC_CHANNEL_MSG				= 0x03
-HON_SC_CHANGED_CHANNEL          = 0x04
-HON_SC_JOINED_CHANNEL   		= 0x05
+HON_SC_JOINED_CHANNEL           = 0x04
+HON_SC_ENTERED_CHANNEL   		= 0x05
 HON_SC_LEFT_CHANNEL     		= 0x06
 HON_SC_WHISPER          		= 0x08
 HON_SC_WHISPER_FAILED   		= 0x09
@@ -84,19 +84,5 @@ HON_CS_CHANNEL_EMOTE    		= 0x65
 HON_CS_BUDDY_ACCEPT				= 0xB3
 
 # Dummy Events / Custom events?
-HON_SC_PACKET_RECV              = "HON_SC_PACKET_RECV"
+HON_SC_PACKET                   = "HON_SC_PACKET"
 
-""" English translations for events. 
-	
-	Available events
-	* ping
-	* total_online
-    * whisper
-
-"""
-socket_events = {
-	HON_SC_INITIAL_STATUS : "initial_status",
-	HON_SC_PING : "ping",
-	HON_SC_TOTAL_ONLINE : "total_online",
-	HON_SC_WHISPER : "whisper",
-}

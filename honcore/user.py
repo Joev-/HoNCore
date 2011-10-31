@@ -7,63 +7,33 @@ and will be updated in real time. The response contains a big list of buddies, b
 buddy/ignore/ban add/remove packets is the only way to obtain this initial information.
 """
 
-""" Functions """
-def id2nick(bid):
-    """ Provide a user's nick instead of their ID. Purely visual, useful for notifications.
-        TODO: Modify so it can find either a buddy or clan member.
-    """
-    for user in account.buddy_list:
-        if bid == user.buddy_id:
-            if user.clantag != "":
-                clantag = "[" + user.clantag + "]"
-            else:
-                clantag = ""
-            name = clantag + user.nickname
-            return name
-    return ""
-
-def set_status(nick, server, gamename, status):
-    """ Update the status for a buddy.
-        Some data like server and game name are not stored... Buuuut, they could be.
-    """
-    global account
-    for user in account.buddy_list:
-        if user.nickname == nick:
-            user.status = status
-
-def get_buddy_list():
-    return account.buddylist
 
 """
-A User object holds information pertaining a user, can be a clan member, a buddy, both, or none. 
+A User object holds information pertaining a user, can be any user in HoN that the client
+needs to know about. e.g. A clan member, buddy, or a user in a chat channel.
 
-A user holds the following
-    + accId         ~ The user's account id.
-    + nick          ~ The user's nickname.
-    + accIcon       ~ The user's account icon. e.g. ....
-    + clanTag       ~ The user's clan tag, to go together with the nick.
-    + status        ~ The current status of the user. e.g. Not Found, Offline, In Channels... and In Game....
-    + flags         ~ Flags for the user, e.g. prepurchased, officer, admin, staff.
-
-Possible information to hold.
-    + If the user is in a game it would show the game name and server that they are in. 
-      Storing it would reduce requests, and it would be changed when the user leaves a game since a new
-      status is sent anyway.
+A user holds the following:
+    * Nickname          The user's nickname, including the clan tag.
+    * Account ID        The account ID of the user.
+    * Status            The user's status. e.g. Ingame, offline, online.
+    * Flags             The user's account flags. e.g. S2 admin, Prepurchased. TODO: Find out more.
+    * Chat Icon         The little graphical chat icon which is usual a BR flag.
+    * Nickname colour   The colour of the user's nickname.
+    * Account Icon      The account icon.
 
 Some information about users can be obtained using a whois command, the whois returns the user's status and the channels the 
 user is currently in unless the user is in a game. If the user is in a game then it returns the game name and the... current
 game time. e.g. "Current game time: Lobby" or "Current game time: Banning" or "Current game time: 0:39:00."
 """
 class User:
-    def __init__(self, accid, nick, buddy_id=None, clan_id=None, clan_tag="", clan_name=None, status=0, flag=0x00):
+    def __init__(self, nickname, account_id, status, flags, chat_icon, nick_colour, account_icon):
+        self.nickname = nickname
         self.account_id = account_id
-        self.nickname = nick
-        self.buddy_id = buddy_id
-        self.clan_id = clan_id
-        self.clan_tag = clan_tag
-        self.clan_name = clan_name
         self.status = status
-        self.flag = flag
+        self.flags = flags
+        self.chat_icon = chat_icon
+        self.nick_colour = nick_colour
+        self.account_icon = account_icon
 
     def __repr__(self):
         return "<User: #%s %s>" % (self.account_id, self.nickname)

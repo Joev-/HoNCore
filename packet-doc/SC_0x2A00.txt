@@ -1,0 +1,5 @@
+Packet ID : 0x2A00		Name: Ping
+---------------------------------------------------------
+
+This is a ping request from the chat server.
+It must be responded to by a pong packet with the ID of 0x2A01

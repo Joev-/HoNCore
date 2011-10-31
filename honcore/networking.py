@@ -1,7 +1,7 @@
 import struct, time, threading, thread, socket
 from exceptions import *
 from packetdef import *
-from user import id2nick
+from user import User
 from lib.construct import *
 
 """ TODO: Update constants """
@@ -80,10 +80,10 @@ class ChatSocket:
         self.events = client_events
 
         # Transparently connect the ping event to the pong sender.
-        self.events[HON_SC_PING].connect(self.send_pong)
+        self.events[HON_SC_PING].connect(self.send_pong, priority=1)
 
         # Some internal handling of the authentication process is also needed
-        self.events[HON_SC_AUTH_ACCEPTED].connect(self.on_auth_accepted)
+        self.events[HON_SC_AUTH_ACCEPTED].connect(self.on_auth_accepted, priority=1)
 
     @property
     def is_authenticated(self):
@@ -197,7 +197,9 @@ class ChatSocket:
     def parse_packet(self, packet):
         """ Core function to tie together all of the packet parsing. """
         packet_id = self.packet_parser.parse_id(packet)
-            
+        
+        # Trim the length and packet id from the packet
+        packet = packet[4:]
         try:
             packet_data = self.packet_parser.parse_data(packet_id, packet)
         except HoNCoreError, e:
@@ -221,13 +223,33 @@ class ChatSocket:
     def send_channel_message(self):
         pass
     
-    def send_whisper(self):
-        pass
+    def send_whisper(self, player, message):
+        """
+        Sends the message to the player in the form of a whisper.
+        Takes 2 parameters.
+            `player`    A string containing the player's name.
+            `message`   A string containing the message.
+        Packet ID is 0x08 or HON_CS_WHISPER.
+        """
+
+        c = Struct("whisper",
+           ULInt16("id"),
+           String("player", len(player)+1, encoding="utf8", padchar="\x00"),
+           String("message", len(message)+1, encoding="utf8", padchar="\x00")
+        )
+        packet = c.build(Container(id=HON_CS_WHISPER, player=unicode(player), message=unicode(message)))
+        self.send(packet)
 
     def send_auth_info(self, account_id, cookie, ip, auth_hash, protocol, invis):
         """ 
-        Sends the initial authentication packet to the chat server and parses the 
-        response returned by the server.
+        Sends the chat server authentication request.
+        Takes 6 parameters.
+            `account_id`    An integer containing the player's account ID.
+            `cookie`        A 33 character string containing a cookie.
+            `ip`            A string containing the player's IP address.
+            `auth`          A string containing an authentication hash.
+            `protocol`      An integer containing the protocol version to be used.
+            `invis`         A boolean value, determening if invisible mode is used.
         """
         c = Struct("login",
             ULInt16("id"),
@@ -259,17 +281,45 @@ class ChatSocket:
     def send_clan_message(self):
         pass
 
-    def send_private_message(self):
-        pass
+    def send_private_message(self, player, message):
+        """
+        Sends the message to the player in the form of a private message.
+        Packet ID: 0x1C
+        """
+        c = Struct("private_message",
+               ULInt16("id"),
+               String("player", len(player)+1, encoding="utf8", padchar="\x00"),
+               String("message", len(message)+1, encoding="utf8", padchar="\x00")
+            )
+        packet = c.build(Container(id=HON_CS_PM, player=unicode(player), message=unicode(message)))
+        self.send(packet)
 
-    def send_join_channel(self):
-        pass
+
+    def send_join_channel(self, channel):
+        """
+        Sends a request to join the channel.
+        """
+        c = Struct("join_channel",
+                ULInt16("id"),
+                String("channel", len(channel)+1, encoding="utf8", padchar="\x00")
+            )
+        packet = c.build(Container(id=HON_CS_JOIN_CHANNEL, channel=unicode(channel)))
+        self.send(packet)
 
     def send_whisper_buddies(self):
         pass
 
-    def send_leave_channel(self):
-        pass
+    def send_leave_channel(self, channel):
+        """
+        Leaves the channel `channel`.
+        Packet ID: 0x22 or HON_CS_LEAVE_CHANNEL
+        """
+        c = Struct("leave_channel",
+               ULInt16("id"),
+               String("channel", len(channel)+1, encoding="utf8", padchar="\x00")
+            )
+        packet = c.build(Container(id=HON_CS_LEAVE_CHANNEL, channel=unicode(channel)))
+        self.send(packet)
 
     def send_user_info(self):
         pass
@@ -310,7 +360,7 @@ class ChatSocket:
     def send_channel_auth_list(self):
         pass
 
-    def send_join_channel_password(self):
+    def send_join_channel_password(self, channel, password):
         pass
 
     def send_clan_add_member(self):
@@ -335,8 +385,8 @@ class PacketParser:
         self.__add_parser(HON_SC_AUTH_ACCEPTED, self.parse_auth_accepted)
         self.__add_parser(HON_SC_PING, self.parse_ping)
         self.__add_parser(HON_SC_CHANNEL_MSG, self.parse_channel_message)
-        self.__add_parser(HON_SC_CHANGED_CHANNEL, self.parse_changed_channel)
         self.__add_parser(HON_SC_JOINED_CHANNEL, self.parse_joined_channel)
+        self.__add_parser(HON_SC_ENTERED_CHANNEL, self.parse_entered_channel)
         self.__add_parser(HON_SC_LEFT_CHANNEL, self.parse_left_channel)
         self.__add_parser(HON_SC_WHISPER, self.parse_whisper)
         self.__add_parser(HON_SC_WHISPER_FAILED, self.parse_whisper_failed)
@@ -430,13 +480,93 @@ class PacketParser:
         return {}
 
     def parse_channel_message(self, packet):
-        pass
+        """
+        Triggered when a message is sent to a channel that the user
+        is currently in.
+        Returns the following:
+            `account_id`    The ID of player account who sent the message.
+            `channel_id`    The ID of the channel message was sent to.
+            `message`       The message sent.
+        """
+        c = Struct('channel_message',
+                   ULInt32('account_id'),
+                   ULInt32('channel_id'),
+                   CString('message')
+                  )
+        r = c.parse(packet)
+        return {
+            'account_id': r.account_id,
+            'channel_id': r.channel_id,
+            'message'   : r.message
+        }
     
-    def parse_changed_channel(self, packet):
-        pass
-
     def parse_joined_channel(self, packet):
-        pass
+        """
+        Triggered when `the user` joins a channel.
+        Returns the following:
+            `channel`       Name of the channel joined.
+            `channel_id`    The ID of the channel joined.
+            `topic`         The topic set for the channel.
+            `operators`     A list of operators in the channel and the data regarding them.
+            `users`         A list of users in the channel and data regarding them.
+        """
+        c = Struct('changed_channel', 
+                CString('channel_name'), 
+                ULInt32('channel_id'), 
+                ULInt8('unknown'), 
+                CString('channel_topic'), 
+                ULInt32('op_count'),
+                MetaRepeater(lambda ctx: ctx['op_count'],
+                    Struct('op_users',
+                        ULInt32('op_aid'),
+                        Byte('op_type')
+                    )
+                ),
+                ULInt32('user_count'),
+                MetaRepeater(lambda ctx: ctx['user_count'],
+                    Struct('users',
+                        CString('nickname'),
+                        ULInt32('id'),
+                        Byte('status'),
+                        Byte('flags'),
+                        CString('chat_icon'),
+                        CString('nick_colour'),
+                        CString('account_icon')
+                    )
+                )
+            )
+        r = c.parse(packet)
+         
+        return {
+            'channel': r.channel_name,
+            'channel_id': r.channel_id,
+            'topic': r.channel_topic,
+            'operators': [op for op in r.op_users],
+            'users': [User(u.nickname, u.id, u.status, u.flags, u.chat_icon,
+                           u.nick_colour, u.account_icon) for u in r.users],
+        }
+
+    def parse_entered_channel(self, packet):
+        """
+        When another user joins a channel.
+        Returns the following:
+            `channel_id`    The ID of the channel that the user joined.
+            `user`          A `User` object containing the user that joined.
+        """
+        c = Struct('entered_channel',
+                CString('u_nickname'),
+                ULInt32('u_id'),
+                ULInt32('channel_id'),
+                Byte('u_status'),
+                Byte('u_flags'),
+                CString('u_chat_icon'),
+                CString('u_nick_colour'),
+                CString('u_account_icon')
+            )
+        r = c.parse(packet)
+        u = User(r.u_nickname, r.u_id, r.u_status, r.u_flags, r.u_chat_icon,
+                      r.u_nick_colour, r.u_account_icon)
+        return {'channel_id': r.channel_id, 'user': u}
 
     def parse_left_channel(self, packet):
         pass
@@ -448,7 +578,7 @@ class PacketParser:
             `player`    The name of the player who sent the whisper.
             `message`   The full message sent in the whisper
         """
-        c = Struct("packet", ULInt16("size"), ULInt16("packetid"), CString("name"), CString("message"))
+        c = Struct("packet", CString("name"), CString("message"))
         r = c.parse(packet)
         return {"player" : r.name, "message" : r.message }
 
@@ -460,40 +590,41 @@ class PacketParser:
         The initial status packet contains information for all available buddy and clan members, 
         as well as some server statuses and matchmaking settings.
         """
-        contact_count = int(struct.unpack_from('I', packet[4:8])[0]) # Tuples?
-        contact_data = packet[8:]
-        if contact_count > 0:
-            i = 1
-            #print("Parsing data for %i contacts." % contact_count)
-            while i <= int(contact_count):
-                status = int(struct.unpack_from('B', contact_data[4])[0])
-                nick = ""
-                gamename = ""
-                flag = ""
-                if status == HON_STATUS_INLOBBY or status == HON_STATUS_INGAME:
-                    c = Struct("buddy", ULInt32("buddyid"), Byte("status"), Byte("flag"), CString("server"), CString("gamename"))
-                    r = c.parse(contact_data)
-                    nick = id2nick(r.buddyid)
-                    flag = str(r.flag)
-                    contact_data = contact_data[6 + (len(r.server)+1+len(r.gamename)+1):]
-                    gamename = r.gamename
-                else:
-                    c = Struct("buddy", ULInt32("buddyid"), Byte("status"), Byte("flag"))
-                    r = c.parse(contact_data[:6])
-                    nick = id2nick(r.buddyid)
-                    flag = str(r.flag)
-                    contact_data = contact_data[6:]
+        #contact_count = int(struct.unpack_from('I', packet[:4])[0]) # Tuples?
+        #contact_data = packet[4:]
+        #if contact_count > 0:
+            #i = 1
+            ##print("Parsing data for %i contacts." % contact_count)
+            #while i <= int(contact_count):
+                #status = int(struct.unpack_from('B', contact_data[4])[0])
+                #nick = ""
+                #gamename = ""
+                #flag = ""
+                #if status == HON_STATUS_INLOBBY or status == HON_STATUS_INGAME:
+                    #c = Struct("buddy", ULInt32("buddyid"), Byte("status"), Byte("flag"), CString("server"), CString("gamename"))
+                    #r = c.parse(contact_data)
+                    #nick = id2nick(r.buddyid)
+                    #flag = str(r.flag)
+                    #contact_data = contact_data[6 + (len(r.server)+1+len(r.gamename)+1):]
+                    #gamename = r.gamename
+                #else:
+                    #c = Struct("buddy", ULInt32("buddyid"), Byte("status"), Byte("flag"))
+                    #r = c.parse(contact_data[:6])
+                    #nick = id2nick(r.buddyid)
+                    #flag = str(r.flag)
+                    #contact_data = contact_data[6:]
                 
-                if nick != "":
-                    # Check for a name because sometimes my own account id is in the list of online buddies, why?
-                    # Above message is no longer valid, and this should be revised, the logged in user's name is in the list whenever they
-                    # are in a clan because this user data contains data for clan members and buddies.
-                    # user.updateStatus(nick)
-                    if gamename is not "":
-                        print(nick + " is online and in the game " + gamename)
-                    else:
-                        print(nick + " is online.")
-                i+=1
+                #if nick != "":
+                    ## Check for a name because sometimes my own account id is in the list of online buddies, why?
+                    ## Above message is no longer valid, and this should be revised, the logged in user's name is in the list whenever they
+                    ## are in a clan because this user data contains data for clan members and buddies.
+                    ## user.updateStatus(nick)
+                    #if gamename is not "":
+                        #print(nick + " is online and in the game " + gamename)
+                    #else:
+                        #print(nick + " is online.")
+                #i+=1
+        return {}
 
     def parse_update_status(self, packet):
         pass
@@ -511,7 +642,7 @@ class PacketParser:
             `player`    The name of the player who sent the whisper.
             `message`   The full message sent in the whisper
         """
-        c = Struct("packet", ULInt16("size"), ULInt16("packetid"), CString("name"), CString("message"))
+        c = Struct("packet", String("name"), CString("message"))
         r = c.parse(packet)
         return {"player" : r.name, "message" : r.message }
 

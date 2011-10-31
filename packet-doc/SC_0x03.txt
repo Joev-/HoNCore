@@ -1,0 +1,4 @@
+Packet ID : 0x03		Name: Channel Message
+---------------------------------------------------------
+
+This packet is received when a message is sent to a channel that the user is in.

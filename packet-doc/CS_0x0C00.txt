@@ -1,0 +1,13 @@
+Packet ID : 0x0C00		Name: Auth Info
+-------------------------
+
+This is the authentication packet that is required to authenticate with the chat server.
+It is the first packet which must be sent when connecting.
+
+The following information is required for the packet and authentication to be accepted.
+	* Packet ID
+	* Account ID
+	* Cookie
+	* IP Address
+	* Auth Hash
+	* 

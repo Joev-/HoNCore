@@ -18,18 +18,21 @@ class HoNClient(object):
         self.config = _config_defaults
         self.events = {}
         self.__create_events()
+        self.__setup_events()
         self.__chat_socket = ChatSocket(self.events)
         self.__listener = None
         self.__requester = Requester()
         self.account = None
+        self.__channels = {}
+        self.__users = {}
 
     def __create_events(self):
         """ Create each event that can be triggered by the client. """
         self.events[HON_SC_AUTH_ACCEPTED] = Event("Auth Accepted", HON_SC_AUTH_ACCEPTED)
         self.events[HON_SC_PING] = Event("Ping", HON_SC_PING)
         self.events[HON_SC_CHANNEL_MSG] = Event("Channel Message", HON_SC_CHANNEL_MSG)
-        self.events[HON_SC_CHANGED_CHANNEL] = Event("Changed Channel", HON_SC_CHANGED_CHANNEL)
-        self.events[HON_SC_JOINED_CHANNEL] = Event("Joined Channel", HON_SC_JOINED_CHANNEL)
+        self.events[HON_SC_JOINED_CHANNEL] = Event("Join Channel", HON_SC_JOINED_CHANNEL)
+        self.events[HON_SC_ENTERED_CHANNEL] = Event("Entered Channel", HON_SC_ENTERED_CHANNEL)
         self.events[HON_SC_LEFT_CHANNEL] = Event("Left Channel", HON_SC_LEFT_CHANNEL)
         self.events[HON_SC_WHISPER] = Event("Whisper", HON_SC_WHISPER)
         self.events[HON_SC_PM] = Event("Private Message", HON_SC_PM)
@@ -37,6 +40,31 @@ class HoNClient(object):
         self.events[HON_SC_MESSAGE_ALL] = Event("Server Message", HON_SC_MESSAGE_ALL)
     
         self.events[HON_SC_TOTAL_ONLINE] = Event("Total Online", HON_SC_TOTAL_ONLINE)
+
+    def __setup_events(self):
+        """
+        Transparent handling of some data is needed so that the client
+        can track things such as users and channels.
+        """
+        self.events[HON_SC_JOINED_CHANNEL].connect(self.__on_joined_channel, priority=1)
+        self.events[HON_SC_ENTERED_CHANNEL].connect(self.__on_entered_channel, priority=1)
+    
+    def __on_joined_channel(self, channel, channel_id, topic, operators, users):
+        """
+        Channel names, channel ids, user nicks and user account ids need to be
+        contained in a hash table/dict so they can be looked up later when needed.
+        """
+        self.__channels[channel_id] = channel
+
+        for user in users:
+            self.__users[user.account_id] = user
+
+    def __on_entered_channel(self, channel_id, user):
+        """
+        Transparently add the id and nick of the user who entered the channel to
+        the id2user dictionary.
+        """
+        self.__users[user.account_id] = user
 
     def _configure(self, *args, **kwargs):
         config_map = {
@@ -107,7 +135,7 @@ class HoNClient(object):
             attempts = 0
             while True:
                 try:
-                    self.__requester.logout(user.account.cookie)
+                    self.__requester.logout(self.account.cookie)
                     self.account.logged_in = False
                     break
                 except MasterServerError, e:
@@ -136,7 +164,7 @@ class HoNClient(object):
         if self.__chat_socket is None:
             self.__chat_socket = ChatSocket(self.events)
         try:
-            self.__chat_socket.connect(user.account.chat_url, self.config['chatport']) # Basic connection to the socket
+            self.__chat_socket.connect(self.account.chat_url, self.config['chatport']) # Basic connection to the socket
         except HoNCoreError as e:
             if e.code == 10: # Socket error.
                 raise ChatServerError(208) # Could not connect to the chat server.
@@ -148,14 +176,15 @@ class HoNClient(object):
         # Maybe should be handled by the true client. It would be nice for HoNStatus to be able to see that the protocol was incremented..
         # However maybe it's not so important because I should check it each patch regardless.
         try:
-            self.__chat_socket.send_auth_info(user.account.account_id, user.account.cookie, user.account.ip, user.account.auth_hash,  self.config['protocol'], self.config['invis'])
+            self.__chat_socket.send_auth_info(self.account.account_id, self.account.cookie, self.account.ip, self.account.auth_hash,  self.config['protocol'], self.config['invis'])
         except ChatServerError:
             raise # Re-raise the exception.
         
-        # The idea is to give 3 seconds for the chat server to respond to the authentication request.
+        # The idea is to give 5 seconds for the chat server to respond to the authentication request.
         # If it is accepted, then the `is_authenticated` flag will be set to true.
+        # NOTE: Lag will make this sort of iffy....
         attempts = 1
-        while attempts is not 3:
+        while attempts is not 5:
             if self.__chat_socket.is_authenticated:
                 return True
             else:
@@ -225,13 +254,13 @@ class HoNClient(object):
                     ["title"] = "Item 1 title",
                     ["author"] = "MsPudding",
                     ["date"] = "6/30/2011"
-                    ["body"] = "This is the body of the message including line\n feeds"
+                    ["body"] = "This is the body of the message including line feeds"
                 },
                 {
                     ["title"] = "Item 2 title", 
                     ["author"] = "Konrar",
                     ["date"] = "6/29/2011",
-                    ["body"] = "This is the body text\n Sometimes there are ^rColours^*"
+                    ["body"] = "This is the body text Sometimes there are ^rColours^*"
                 }
             ],
             image = "http://icb.s2games.com/motd/4e67cffcc959e.jpg",
@@ -253,6 +282,70 @@ class HoNClient(object):
         motd['honcast'] = raw['honcast']
         return motd
 
+    """ The core client functions."""
+    def join_channel(self, channel, password=None):
+        """
+        Sends a request to join a channel.
+        Takes 2 paramters.
+            `channel`   A string containing the channel name.
+            `password`  The optional password required to join the channel.
+        """
+        if password:
+            self.__chat_socket.send_join_channel_password(channel, password)
+        elif not password:
+            self.__chat_socket.send_join_channel(channel)
+
+    def send_whisper(self, player, message):
+        """ 
+        Sends the message to the player.
+        Takes 2 parameters.
+            `player`    A string containing the player's name.
+            `message`   A string containing the message.
+        """
+        self.__chat_socket.send_whisper(player, message)
+
+    def send_private_message(self, player, message):
+        """
+        Sends the message to the player.
+        Takes 2 parameters.
+            `player`    A string containing the player's name.
+            `message`   A string containing the message.
+        """
+        self.__chat_socket.send_private_message(player, message)
+
+    """ Utility functions """
+    def id_to_channel(self, channel_id):
+        """
+        Wrapper function to return the channel name for the given ID.
+        If no channel was found then return None
+        """
+        try:
+            return self.__channels[channel_id]
+        except KeyError:
+            return None
+
+    def id_to_nick(self, account_id):
+        """
+        Wrapper function to return the nickname for the user associated
+        with that account ID.
+        If no nickname was found then return None
+        """
+        try:
+            return self.__users[account_id].nickname
+        except KeyError:
+            return None
+
+    def id_to_user(self, account_id):
+        """
+        Wrapper function to return the user object for the user
+        associated with that account ID.
+        If no user was found then return None
+        """
+        try:
+            return self.__users[account_id]
+        except KeyError:
+            return None
+
 class Event:
     """
     Event objects represent network level events which can have functions connected to them, which
@@ -268,6 +361,9 @@ class Event:
 
     The functions are stored in a list called handlers, each function is ran when the event is triggered.
 
+    The functions can be assigned a priority so that they are executed in an order. This is useful for
+    ensuring that lower level network/core client related functions are executed first.
+
     On the networking side, the events are triggered after the packet data has been parsed and constructed into useful data.
     The process would be as follows:
     
@@ -277,21 +373,30 @@ class Event:
         event.trigger(useful_data)
 
     """
+
+    class ConnectedMethod:
+        def __init__(self, method, priority):
+            self.method = method
+            self.priority = priority
+        
+        def __repr__(self):
+            return "[%s %s]" % (self.method, self.priority)
+
     def __init__(self, name, packet_id):
         self.name = name            # An english, human name for the event. Maybe it can be used for a lookup later. Not sure of a use for it right now.
         self.packet_id = packet_id  # A packet identifier, either a constant or a hex value of a packet. i.e HON_SC_TOTAL_ONLINE or 0x68.
-        self.handlers = []          # List of connected handlers.
+        self.handlers = []          # List of connected methods.
     
     def __repr__(self):
         return "<%s: %s>" % (self.packet_id, self.name)
     
-    def connect(self, function):
+    def connect(self, function, priority=5):
         """
         Connects a function to a specific event.
         The event is given as an english name, which corresponds
         to a constant in the packet definition file.
         """
-        self.handlers.append(function)
+        self.handlers.append(self.ConnectedMethod(function, priority))
 
     def disonnect(self, function):
         """
@@ -303,9 +408,11 @@ class Event:
     
     def trigger(self, **data):
         """
-        Call each event handler function in the list and pass the keyword argument based data to it.
+        Sorts the connected handlers based on their priority and calls each one in turn,
+        passing the dictionary of keyword arguments, or alternatively with no arguments.
         """
-        for f in self.handlers:
+        for f in sorted(self.handlers, key=lambda cm: cm.priority):
+            f = f.method
             num_args = f.func_code.co_argcount
             f(**data) if num_args > 0 else f()
 
