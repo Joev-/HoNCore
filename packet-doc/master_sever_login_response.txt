@@ -1,0 +1,90 @@
+Master server login response.
+
+Provided the login details are correct the master server responds with a
+serialized php array containing a lot of data.
+
+I have a feeling that this data is quite a mess in regards to organisation and what data is
+provided from S2.
+
+----------------------------------------------------------------------------------
+
+User Account Data
+	* Super ID
+	* Account ID
+	* Nickname
+	* Email
+	* Account Type
+	* Trial
+	* Susp ID
+	* Prepay Only
+	* Standing
+	* Pass Exp
+	* Cookie
+	* IP
+	* Auth Hash
+	* Chat URL
+
+Hero List
+	* A list of free heroes
+	* A list of Early Access heroes
+
+Buddy List
+	* Account ID 	The Account ID of the user that this list belongs to.
+	* An array of arrays of buddies
+	For each `buddy` in the array.
+		* Account ID 	The Account ID of the user that this buddy belongs to.
+		* Buddy ID 		Not sure... Not account IDs.
+		* Status 		The buddie's status, in-game, online, or offline.
+		* Group			Unknown.
+		* Create Time	The time that the buddy was added, as a UNIX timestamp.
+		* Expire Time 	Unknown.
+		* Nickname		The nickname of the buddy.
+		* Standing		Unknown.
+		* Clan Name 	The name of the clan that this buddy is in.
+		* Clan Tag 		The tag of the clan that this buddy is in.
+
+Ignored List
+	* Account ID 	The Account ID of the user that this list belong to.
+	* An array of arrays of ignored users.
+	For each `ignored user` in the array.
+		* Account ID 	The Account ID of the user that this ignored user belong to.
+		* Ignored ID 	Not sure.. Not acount IDs.
+		* Nickname 		The nickname of the ignored user.
+
+Banned List
+	* Account ID 	The Account ID of the user that this list belong to.
+	* An array of arrays of banned users.
+	For each `banned user` in the array.
+		* Account ID 	The Account ID of the user that this ignored user belong to.
+		* Banned ID 	Not sure... Not account IDs.
+		* Reason 		The reason given when banning a user.
+		* Nickname 		The nickname of the banned user.
+
+Account Information
+	* Account ID 	The Account ID of the user that this info belong to.
+	An array of the account information
+		* Account ID
+		* Standing
+		* Level
+		* Level Exp
+		* Discos				Disconnects I assume..
+		* Possible Discos 		
+		* Games Played
+		* Account Pub Skill
+		* Account Wins
+		* Account Losses
+		* cs_amm_team_rating	Casual mode PSR?
+		* cs_wins				Casual mode wins?
+		* cs_losses				Casual mode losses?
+		* rnk_amm_team_rating	Matchmaking PSR?
+		* rnk_wins				Matchmaking wins?
+		* rnk_losses			Matchmaking losses?
+		* Account Discos 		
+		* rnk_discos 
+		* cs_discos 			
+		* Account Games Played 	
+		* rnk_games_played
+		* cs_games_played
+
+More TODO..
+			

@@ -1,9 +1,30 @@
 """ 
+HoNCore. Python library providing connectivity and functionality
+with HoN's chat server.
+
+Copyright (c) 2011 Joseph Vaughan.
+
+This file is part of HoNCore.
+
+HoNCore is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+HoNCore is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with HoNCore.  If not, see <http://www.gnu.org/licenses/>.
+"""
+
+"""
 Packet ID definitions.
 Updated 23-7-11.
 Client version 2.40.2
 """
-
 
 """ Server -> Client """
 HON_SC_AUTH_ACCEPTED			= 0x1C00
@@ -84,5 +105,23 @@ HON_CS_CHANNEL_EMOTE    		= 0x65
 HON_CS_BUDDY_ACCEPT				= 0xB3
 
 # Dummy Events / Custom events?
-HON_SC_PACKET                   = "HON_SC_PACKET"
+HON_SC_PACKET_RECV              = "HON_SC_PACKET_RECV"
+
+""" User Flags"""
+HON_FLAGS_NONE          = 0x00
+HON_FLAGS_OFFICER       = 0x01
+HON_FLAGS_LEADER        = 0x02
+HON_FLAGS_ADMINISTRATOR = 0x03
+HON_FLAGS_STAFF         = 0x04
+HON_FLAGS_PREPURCHASED  = 0x40
+
+""" User States"""
+HON_STATUS_OFFLINE      = 2
+HON_STATUS_ONLINE       = 3
+HON_STATUS_INLOBBY      = 4
+HON_STATUS_INGAME       = 5
+
+""" Login Modes"""
+HON_MODE_NORMAL         = 0x00
+HON_MODE_INVISIBLE      = 0x03
 

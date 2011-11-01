@@ -1,8 +1,30 @@
+"""
+HoNCore. Python library providing connectivity and functionality
+with HoN's chat server.
+
+Copyright (c) 2011 Joseph Vaughan.
+
+This file is part of HoNCore.
+
+HoNCore is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+HoNCore is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with HoNCore.  If not, see <http://www.gnu.org/licenses/>.
+"""
+
 import sys, struct, socket, time
-import deserialise, user
+import deserialise, common
 from requester import Requester
 from networking import ChatSocket
-from packetdef import *
+from constants import *
 from exceptions import *
 
 __all__ = ['HoNClient']
@@ -16,10 +38,10 @@ _config_defaults = {
 class HoNClient(object):    
     def __init__(self):
         self.config = _config_defaults
-        self.events = {}
+        self.__events = {}
         self.__create_events()
         self.__setup_events()
-        self.__chat_socket = ChatSocket(self.events)
+        self.__chat_socket = ChatSocket(self.__events)
         self.__listener = None
         self.__requester = Requester()
         self.account = None
@@ -28,26 +50,28 @@ class HoNClient(object):
 
     def __create_events(self):
         """ Create each event that can be triggered by the client. """
-        self.events[HON_SC_AUTH_ACCEPTED] = Event("Auth Accepted", HON_SC_AUTH_ACCEPTED)
-        self.events[HON_SC_PING] = Event("Ping", HON_SC_PING)
-        self.events[HON_SC_CHANNEL_MSG] = Event("Channel Message", HON_SC_CHANNEL_MSG)
-        self.events[HON_SC_JOINED_CHANNEL] = Event("Join Channel", HON_SC_JOINED_CHANNEL)
-        self.events[HON_SC_ENTERED_CHANNEL] = Event("Entered Channel", HON_SC_ENTERED_CHANNEL)
-        self.events[HON_SC_LEFT_CHANNEL] = Event("Left Channel", HON_SC_LEFT_CHANNEL)
-        self.events[HON_SC_WHISPER] = Event("Whisper", HON_SC_WHISPER)
-        self.events[HON_SC_PM] = Event("Private Message", HON_SC_PM)
+        self.__events[HON_SC_AUTH_ACCEPTED] = Event("Auth Accepted", HON_SC_AUTH_ACCEPTED)
+        self.__events[HON_SC_PING] = Event("Ping", HON_SC_PING)
+        self.__events[HON_SC_CHANNEL_MSG] = Event("Channel Message", HON_SC_CHANNEL_MSG)
+        self.__events[HON_SC_JOINED_CHANNEL] = Event("Join Channel", HON_SC_JOINED_CHANNEL)
+        self.__events[HON_SC_ENTERED_CHANNEL] = Event("Entered Channel", HON_SC_ENTERED_CHANNEL)
+        self.__events[HON_SC_LEFT_CHANNEL] = Event("Left Channel", HON_SC_LEFT_CHANNEL)
+        self.__events[HON_SC_WHISPER] = Event("Whisper", HON_SC_WHISPER)
+        self.__events[HON_SC_PM] = Event("Private Message", HON_SC_PM)
 
-        self.events[HON_SC_MESSAGE_ALL] = Event("Server Message", HON_SC_MESSAGE_ALL)
+        self.__events[HON_SC_MESSAGE_ALL] = Event("Server Message", HON_SC_MESSAGE_ALL)
     
-        self.events[HON_SC_TOTAL_ONLINE] = Event("Total Online", HON_SC_TOTAL_ONLINE)
+        self.__events[HON_SC_TOTAL_ONLINE] = Event("Total Online", HON_SC_TOTAL_ONLINE)
+
+        self.__events[HON_SC_PACKET_RECV] = Event("Packet Received", HON_SC_PACKET_RECV)
 
     def __setup_events(self):
         """
         Transparent handling of some data is needed so that the client
         can track things such as users and channels.
         """
-        self.events[HON_SC_JOINED_CHANNEL].connect(self.__on_joined_channel, priority=1)
-        self.events[HON_SC_ENTERED_CHANNEL].connect(self.__on_entered_channel, priority=1)
+        self.connect_event(HON_SC_JOINED_CHANNEL, self.__on_joined_channel, priority=1)
+        self.connect_event(HON_SC_ENTERED_CHANNEL, self.__on_entered_channel, priority=1)
     
     def __on_joined_channel(self, channel, channel_id, topic, operators, users):
         """
@@ -80,6 +104,11 @@ class HoNClient(object):
             if kwarg in config_map:
                 config_map[kwarg][kwarg] = kwargs[kwarg]
 
+    """ Debugging functions """
+    def list_users(self):
+        for aid in self.__users:
+            print self.__users[aid]
+
     """ Master server related functions. """
     def _login(self, username, password):
         """ HTTP login request to the master server.
@@ -111,10 +140,13 @@ class HoNClient(object):
 
         # Pass the data to the deserialiser
         try:
-            self.account = deserialise.parse(response)
+            self.account, new_users = deserialise.parse(response)
             self.account.logged_in = True
         except MasterServerError:
             raise MasterServerError(101)
+
+        for user in new_users:
+            self.__users[user.account_id] = user
 
         return True
 
@@ -180,11 +212,11 @@ class HoNClient(object):
         except ChatServerError:
             raise # Re-raise the exception.
         
-        # The idea is to give 5 seconds for the chat server to respond to the authentication request.
+        # The idea is to give 10 seconds for the chat server to respond to the authentication request.
         # If it is accepted, then the `is_authenticated` flag will be set to true.
         # NOTE: Lag will make this sort of iffy....
         attempts = 1
-        while attempts is not 5:
+        while attempts is not 10:
             if self.__chat_socket.is_authenticated:
                 return True
             else:
@@ -243,9 +275,9 @@ class HoNClient(object):
             raw = deserialise.parse_raw(raw)
         except ValueError:
             raise MasterServerError(108)
-        return self.motd_parse(raw)
+        return self.__motd_parse(raw)
 
-    def motd_parse(self, raw):
+    def __motd_parse(self, raw):
         """ 
         Parses the message of the day entries into a dictionary of the format:
         motd = {
@@ -314,6 +346,27 @@ class HoNClient(object):
         self.__chat_socket.send_private_message(player, message)
 
     """ Utility functions """
+    def connect_event(self, event_id, method, priority=5):
+        """
+        Wrapper method for connecting events.
+        """
+        try:
+            self.__events[event_id].connect(method, priority)
+        except KeyError:
+            raise HoNCoreError(13) # Unknown event ID 
+    
+    def disconnect_event(self, event_id, method):
+        """
+        Wrapper method for disconnecting events.
+        """
+        try:
+            self.__events[event_id].disconnect(method)
+        except HoNCoreError, e:
+            if e.id == 14: # Method is not connected to this event.
+                raise
+        except KeyError:
+            raise HoNCoreError(13) # Unknown event ID
+
     def id_to_channel(self, channel_id):
         """
         Wrapper function to return the channel name for the given ID.
@@ -345,6 +398,12 @@ class HoNClient(object):
             return self.__users[account_id]
         except KeyError:
             return None
+
+    def get_buddies(self):
+        buddies = []
+        for buddy_id in self.account.buddy_list:
+            buddies.append(self.__users[buddy_id])
+        return buddies
 
 class Event:
     """
@@ -398,12 +457,17 @@ class Event:
         """
         self.handlers.append(self.ConnectedMethod(function, priority))
 
-    def disonnect(self, function):
+    def disonnect(self, method):
         """
         Hopefully it can be used to remove event handlers from this event
         object so they are no longer triggered. Useful if say, an event only 
-        needs to be fired once, for a reminder or such.
+        needs to be triggered once, for a reminder or such.
         """
+        for cm in self.handlers:
+            if cm.method == method:
+                self.handlers.remove(cm)
+            else:
+                raise HoNCoreError(14) # Method is not connected to this event_id
         pass
     
     def trigger(self, **data):
@@ -411,8 +475,8 @@ class Event:
         Sorts the connected handlers based on their priority and calls each one in turn,
         passing the dictionary of keyword arguments, or alternatively with no arguments.
         """
-        for f in sorted(self.handlers, key=lambda cm: cm.priority):
-            f = f.method
+        for cm in sorted(self.handlers, key=lambda c: c.priority):
+            f = cm.method
             num_args = f.func_code.co_argcount
             f(**data) if num_args > 0 else f()
 

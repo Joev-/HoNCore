@@ -1,29 +1,31 @@
+""" 
+HoNCore. Python library providing connectivity and functionality
+with HoN's chat server.
+
+Copyright (c) 2011 Joseph Vaughan.
+
+This file is part of HoNCore.
+
+HoNCore is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+HoNCore is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with HoNCore.  If not, see <http://www.gnu.org/licenses/>.
+"""
+
 import struct, time, threading, thread, socket
 from exceptions import *
-from packetdef import *
-from user import User
+from constants import *
+from common import User
 from lib.construct import *
 
-""" TODO: Update constants """
-HON_FLAGS_NONE          = 0x00
-HON_FLAGS_OFFICER       = 0x01
-HON_FLAGS_LEADER        = 0x02
-HON_FLAGS_ADMINISTRATOR = 0x03
-HON_FLAGS_STAFF         = 0x04
-HON_FLAGS_PREPURCHASED  = 0x40
-
-HON_STATUS_OFFLINE      = 0
-HON_STATUS_ONLINE       = 3
-HON_STATUS_INLOBBY      = 4
-HON_STATUS_INGAME       = 5
-
-HON_MODE_NORMAL         = 0x00
-HON_MODE_INVISIBLE      = 0x03
-
-HON_NOTIFICATION_ADDED_AS_BUDDY   = 0x01
-HON_NOTIFICATION_BUDDY_ACCEPTED   = 0x02
-HON_NOTIFICATION_REMOVED_AS_BUDDY = 0x03
-HON_NOTIFICATION_BUDDY_REMOVED    = 0x04
 
 class SocketListener(threading.Thread):
     """
@@ -197,6 +199,12 @@ class ChatSocket:
     def parse_packet(self, packet):
         """ Core function to tie together all of the packet parsing. """
         packet_id = self.packet_parser.parse_id(packet)
+        
+        # Trigger a general event on all packets. Passes the raw packet.
+        try:
+            self.events[HON_SC_PACKET_RECV].trigger(**{'packet_id': packet_id, 'packet': packet})
+        except KeyError:
+            pass
         
         # Trim the length and packet id from the packet
         packet = packet[4:]
@@ -455,9 +463,6 @@ class PacketParser:
               match then subtract the amount received from the total expected size and tell the socket to recv
               that new amount. This all needs to be done before passing the packet to the packet parser.
         """
-        # TODO: Move to being a 'socket event' of 'receive'.
-        #if 'packet_received' in handler.events:
-            #handler.events['packet_received'](packet_id=packet_id, packet=packet)
         
         """ Passes the packet to a packet parser so it can be parsed for data. The returned data
             is then passed to each event handler that requests it as a list of named keywords which
@@ -468,7 +473,6 @@ class PacketParser:
             data = parser(packet)
             return data
         else:
-            # Unknown packet, raise a debug message somehow.
             raise HoNCoreError(12) # Unknown packet received.
     
     def parse_auth_accepted(self, packet):
@@ -542,7 +546,7 @@ class PacketParser:
             'channel_id': r.channel_id,
             'topic': r.channel_topic,
             'operators': [op for op in r.op_users],
-            'users': [User(u.nickname, u.id, u.status, u.flags, u.chat_icon,
+            'users': [User(u.id, u.nickname, u.status, u.flags, u.chat_icon,
                            u.nick_colour, u.account_icon) for u in r.users],
         }
 
@@ -564,7 +568,7 @@ class PacketParser:
                 CString('u_account_icon')
             )
         r = c.parse(packet)
-        u = User(r.u_nickname, r.u_id, r.u_status, r.u_flags, r.u_chat_icon,
+        u = User(r.id, r.u_nickname, r.u_status, r.u_flags, r.u_chat_icon,
                       r.u_nick_colour, r.u_account_icon)
         return {'channel_id': r.channel_id, 'user': u}
 
@@ -590,40 +594,22 @@ class PacketParser:
         The initial status packet contains information for all available buddy and clan members, 
         as well as some server statuses and matchmaking settings.
         """
-        #contact_count = int(struct.unpack_from('I', packet[:4])[0]) # Tuples?
-        #contact_data = packet[4:]
-        #if contact_count > 0:
-            #i = 1
-            ##print("Parsing data for %i contacts." % contact_count)
-            #while i <= int(contact_count):
-                #status = int(struct.unpack_from('B', contact_data[4])[0])
-                #nick = ""
-                #gamename = ""
-                #flag = ""
-                #if status == HON_STATUS_INLOBBY or status == HON_STATUS_INGAME:
-                    #c = Struct("buddy", ULInt32("buddyid"), Byte("status"), Byte("flag"), CString("server"), CString("gamename"))
-                    #r = c.parse(contact_data)
-                    #nick = id2nick(r.buddyid)
-                    #flag = str(r.flag)
-                    #contact_data = contact_data[6 + (len(r.server)+1+len(r.gamename)+1):]
-                    #gamename = r.gamename
-                #else:
-                    #c = Struct("buddy", ULInt32("buddyid"), Byte("status"), Byte("flag"))
-                    #r = c.parse(contact_data[:6])
-                    #nick = id2nick(r.buddyid)
-                    #flag = str(r.flag)
-                    #contact_data = contact_data[6:]
+        #c = Struct('initial_status',
+                #ULInt32('user_count'),
+                #MetaRepeater(lambda ctx: ctx['user_count'],
+                    #Struct('users',
+                        #ULInt32('id'),
+                        #Byte('status'),
+                        #Byte('flags'),
+                        #If(lambda ctx: ctx['status'] == HON_STATUS_INGAME or ctx['status'] == 5,
+                           #CString('server'),
+                           #CString('game_name')
+                        #)
+                    #)
+                #),
                 
-                #if nick != "":
-                    ## Check for a name because sometimes my own account id is in the list of online buddies, why?
-                    ## Above message is no longer valid, and this should be revised, the logged in user's name is in the list whenever they
-                    ## are in a clan because this user data contains data for clan members and buddies.
-                    ## user.updateStatus(nick)
-                    #if gamename is not "":
-                        #print(nick + " is online and in the game " + gamename)
-                    #else:
-                        #print(nick + " is online.")
-                #i+=1
+
+
         return {}
 
     def parse_update_status(self, packet):
@@ -735,8 +721,12 @@ class PacketParser:
     
     def parse_total_online(self, packet):
         """ Gets the number of players online """
-        count = struct.unpack('I', packet[4:8])[0]
-        return {'players_online' : count}
+        c = Struct("players_online",
+               ULInt32('count'),
+               CString('regions')
+            )
+        r = c.parse(packet)
+        return {'count': r.count, 'region_data': r.regions} 
     
     def parse_request_notification(self, packet):
         pass

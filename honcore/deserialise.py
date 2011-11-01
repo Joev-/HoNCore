@@ -1,4 +1,26 @@
-import user
+""" 
+HoNCore. Python library providing connectivity and functionality
+with HoN's chat server.
+
+Copyright (c) 2011 Joseph Vaughan.
+
+This file is part of HoNCore.
+
+HoNCore is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+HoNCore is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with HoNCore.  If not, see <http://www.gnu.org/licenses/>.
+"""
+
+from common import User, Channel, Account
 from exceptions import *
 
 from lib import phpserialize as phpd
@@ -49,53 +71,58 @@ def parse(raw):
         raise MasterServerError(102)
     
     account = get_basic_info(data)
+    new_users = []
+
     try:
-        account.buddy_list = get_buddies(data['buddy_list'])
+        account.buddy_list, users = get_buddies(data['buddy_list'][account.account_id])
     except KeyError:
         pass
-        #account.buddy_list = {}
     
+    for user in users:
+        new_users.append(user)
+
+    try:
+        account.clan_member_list, users = get_clan_memebrs(data['clan_member_info'])
+    except KeyError:
+        pass
+    
+    for user in users:
+        new_users.append(user)
+
     try:
         account.ban_list = get_ban_list(data['banned_list'])
     except KeyError:
         pass
-        #account.ban_list = {}
 
     try:
         account.ignore_list = get_ignore_list(data['ignored_list'])
     except KeyError:
         pass
-        #account.ignore_list = {}
     
-    try:
-        account.clan_member_list = get_clan_memebrs(data['clan_member_info'])
-    except KeyError:
-        # raise MasterServerError(123)
-        pass
-    
-    return account
+    return (account, new_users,)
 
 def get_basic_info(data):
     try:
-       account = user.Account(int(data['super_id']), int(data['account_id']), data['nickname'], data['cookie'], data['auth_hash'], data['chat_url'], data['ip'])
+       account = Account(int(data['super_id']), int(data['account_id']), data['nickname'], data['cookie'], data['auth_hash'], data['chat_url'], data['ip'])
     except KeyError, e:
         raise
         #raise MasterServerError(101, "KeyError", e)
     return account
     
 def get_buddies(buddylist):
-    """ NOTE: It is not possible to get flag and status here. """
-    buddy_list = {}
+    """ NOTE: It is not possible to get flag here, but you can get status. """
+    buddy_list = []
+    new_users = []
     for userKey in buddylist:
-        accid = buddylist[userKey]['account_id']
-        buddyid = buddylist[userKey]['buddy_id']
+        accid = int(buddylist[userKey]['buddy_id'])
         nick = buddylist[userKey]['nickname']
-        clantag = buddylist[userKey]['clan_tag'] or ""
-        clanname = buddylist[userKey]['clan_name']
-
-        buddy = user.User(accid, nick, buddy_id=buddyid, clan_tag=clantag, clan_name=clanname, status=0, flag=0)
-        buddy_list[accid] = buddy
-    return buddy_list
+        clan_tag = buddylist[userKey]['clan_tag']
+        status = int(buddylist[userKey]['status'])
+        if clan_tag:
+            nick = "[%s]%s" % (clan_tag, nick)
+        buddy_list.append(accid)
+        new_users.append(User(accid, nick, status))
+    return (buddy_list, new_users,)
 
 def get_ban_list(data):
     ban_list = {}
@@ -106,6 +133,7 @@ def get_ignore_list(data):
     return ignore_list
 
 def get_clan_memebrs(data):
-    clan_members_list = {}
-    return clan_members_list
+    clan_members = []
+    new_users = []
+    return (clan_members, new_users,)
 

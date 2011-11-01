@@ -1,83 +1,9 @@
 Packet ID : 0x0B	Name: Initial Status
 ---------------------------------------------------------
 
-This packet contains a huge amount of data which contains statuses for buddies, clan members and channel members. Aswell as some sort of matchmaking settings and a global player count. It's basically the status updates for everything all at once.
+This packet is received once the server has authenticated the user. It provides data to initialise a lot of the interface, users and channels. If the user is not in a clan and
+is pushed into one of the HoN xx channels then the size can often be larger than the 
+buffer used on the socket.recv() call.
 
-Clan members are grouped with buddies. In a scenario where there are 4 buddies online and one other clan member the buddy count would show 6. This is 4 buddies and 2 clan members, including one's self.
-
-The following blocks of data are contained in this packet:
-	* Packet Size & Identification
-	* Buddy and Clan member information
-
-Notes 
------
-
-1. - The name isn't very specific, but this is the total number of buddies AND clan members online.
-2. - The following data appears twice, unsure why or what it represents.
-3. - No idea what this is, it varies slightly for each user logged in. Represents a small integer like 3114.
-4. - I don't think these are static, if no one is in a channel and one joins that channel then it is 'created' and thus assigned a new ID.
-5. - Unsure of what this represents.
-6. - This is always the same (89) and in the same location, before the channel topic and after the unknown integer. Unsure of what it represents.
-7. - Find out what the possible values are.
-8. - Not entirely sure it is a string, could be a 32 bit integer and a 16 bit integer. Unsure what it represents anyway.
-9. - Again, another large string of unknown data, unsure if it is a string. Probably not. The size seems to vary depending on how many people are in a chat channel? Not sure..
-
-Structure
----------
-
-UInt16 - Packet size.
-UInt16 - Packet ID.
-
-UInt32 - User count. *1
-	   + - UInt32 - User ID.
-	   + - Byte   - User status.
-	   + - Byte   - User flag.
-
-*2
-UInt32 - Unknown *3
-Uint32 - Account ID.
-Byte   - Status.
-Byte   - Flag.
-UInt32 - Clan ID.
-String - Clan name.
-String - Flag icon.
-String - Text colour.
-String - Account icon.
-
-UInt32 - Unknown *3
-Uint32 - Account ID.
-Byte   - Status.
-Byte   - Flag.
-UInt32 - Clan ID.
-String - Clan name.
-String - Flag icon.
-String - Text colour.
-String - Account icon.
-
-UInt32 - Channel ID. *4
-String - Channel name.
-UInt32 - Unknown. *5
-Byte   - Unknown. *6
-String - Channel Topic.  
-
-UInt32 - Channel operator count.
-	   + - UInt32 - User ID.
-	   + - Byte   - Operator level/status/flag. *7
-
-UInt32 - Channel user count.
-	   + - UInt32 - User ID.
-	   + - Byte   - User status.
-	   + - Byte   - User flag.
-	   + - String - Flag icon.
-	   + - String - Text colour.
-	   + - String - Account icon.
-
-Unknown - Unknown. *8
-String - Matchmaking maps.
-String - Matchmaking casual/normal mode.
-String - Matchmaking game modes.
-String - Matchmaking servers.
-Unknown - Unknown. *9
-
-UInt32 - Players online count.
-String - Unknown numbers for servers.
+The following is contained within this packet:
+	*

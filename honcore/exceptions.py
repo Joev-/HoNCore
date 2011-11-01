@@ -1,4 +1,25 @@
-"""
+""" 
+HoNCore. Python library providing connectivity and functionality
+with HoN's chat server.
+
+Copyright (c) 2011 Joseph Vaughan.
+
+This file is part of HoNCore.
+
+HoNCore is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+HoNCore is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with HoNCore.  If not, see <http://www.gnu.org/licenses/>.
+
+
 Custom exceptions to be raised by this library and caught by any program using this library.
 Helps debug login/logout events/incorrect data and socket errors (timeout, broken pipes etc).
 
@@ -22,7 +43,8 @@ class HoNException(Exception):
 class HoNCoreError(HoNException):
     """
     Exception to be used for honcore internals such as a socket error which will be handled
-    by something else inside honcore.
+    by something else inside honcore, or when a client tries to connect a method to an event
+    that does not exist.
     """
     pass
 
@@ -54,6 +76,8 @@ _errormap = {
     10  : 'Socket error.',
     11  : 'Socket timed out.',
     12  : 'Unknown packet received',
+    13  : 'Unknown event ID',
+    14  : 'Method is not connected to this event ID.',
     100 : 'Could not connect to the masterserver.',
     101 : 'Could not obtain login data.',
     102 : 'Incorrect username/password.',
