@@ -99,30 +99,28 @@ def parse(raw):
     except KeyError:
         pass
     
-    return (account, new_users,)
+    return (account, new_users)
 
 def get_basic_info(data):
     try:
        account = Account(int(data['super_id']), int(data['account_id']), data['nickname'], data['cookie'], data['auth_hash'], data['chat_url'], data['ip'])
     except KeyError, e:
         raise
-        #raise MasterServerError(101, "KeyError", e)
     return account
     
 def get_buddies(buddylist):
-    """ NOTE: It is not possible to get flag here, but you can get status. """
+    """ NOTE: It is not possible to get flag or status here. """
     buddy_list = []
     new_users = []
     for userKey in buddylist:
         accid = int(buddylist[userKey]['buddy_id'])
         nick = buddylist[userKey]['nickname']
         clan_tag = buddylist[userKey]['clan_tag']
-        status = int(buddylist[userKey]['status'])
         if clan_tag:
             nick = "[%s]%s" % (clan_tag, nick)
         buddy_list.append(accid)
-        new_users.append(User(accid, nick, status))
-    return (buddy_list, new_users,)
+        new_users.append(User(accid, nick))
+    return (buddy_list, new_users)
 
 def get_ban_list(data):
     ban_list = {}
@@ -135,5 +133,5 @@ def get_ignore_list(data):
 def get_clan_memebrs(data):
     clan_members = []
     new_users = []
-    return (clan_members, new_users,)
+    return (clan_members, new_users)
 

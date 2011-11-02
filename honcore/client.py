@@ -72,6 +72,14 @@ class HoNClient(object):
         """
         self.connect_event(HON_SC_JOINED_CHANNEL, self.__on_joined_channel, priority=1)
         self.connect_event(HON_SC_ENTERED_CHANNEL, self.__on_entered_channel, priority=1)
+
+    def __on_initial_statuses(self, users):
+        """ Sets the status and flags for each user. """
+        for account_id in users:
+            if account_id in self.__users:
+                user = self.__users[account_id]
+                user.status = users[account_id]['status']
+                user.flags = users[account_id]['flags']
     
     def __on_joined_channel(self, channel, channel_id, topic, operators, users):
         """
@@ -81,14 +89,16 @@ class HoNClient(object):
         self.__channels[channel_id] = channel
 
         for user in users:
-            self.__users[user.account_id] = user
+            if user.account_id not in self.__users:
+                self.__users[user.account_id] = user
 
     def __on_entered_channel(self, channel_id, user):
         """
         Transparently add the id and nick of the user who entered the channel to
-        the id2user dictionary.
+        the users dictionary.
         """
-        self.__users[user.account_id] = user
+        if user.account_id not in self.__users:
+            self.__users[user.account_id] = user
 
     def _configure(self, *args, **kwargs):
         config_map = {
@@ -103,11 +113,6 @@ class HoNClient(object):
         for kwarg in kwargs:
             if kwarg in config_map:
                 config_map[kwarg][kwarg] = kwargs[kwarg]
-
-    """ Debugging functions """
-    def list_users(self):
-        for aid in self.__users:
-            print self.__users[aid]
 
     """ Master server related functions. """
     def _login(self, username, password):
@@ -404,6 +409,11 @@ class HoNClient(object):
         for buddy_id in self.account.buddy_list:
             buddies.append(self.__users[buddy_id])
         return buddies
+
+    """ Debugging functions """
+    def list_users(self):
+        for aid in self.__users:
+            print self.__users[aid]
 
 class Event:
     """

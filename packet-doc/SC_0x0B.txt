@@ -1,9 +1,7 @@
 Packet ID : 0x0B	Name: Initial Status
 ---------------------------------------------------------
 
-This packet is received once the server has authenticated the user. It provides data to initialise a lot of the interface, users and channels. If the user is not in a clan and
-is pushed into one of the HoN xx channels then the size can often be larger than the 
-buffer used on the socket.recv() call.
+This packet is used to get the statuses of buddies and clan members once the user has logged in.
 
 The following is contained within this packet:
 	*

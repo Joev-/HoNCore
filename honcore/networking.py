@@ -45,7 +45,7 @@ class SocketListener(threading.Thread):
     def run(self):
         while not self.stopped:
             try:
-                packet = self.chat_socket.recv(512)
+                packet = self.chat_socket.recv()
                 if not packet:
                     #print "Empty packet received, socket terminated."
                     self.stopped = True
@@ -182,20 +182,26 @@ class ChatSocket:
             #print "Socket error %s while sending." % e
             raise
         return True
-    
-    def recv(self, buf_size):
-        """
-        Wrapper recv method.
-        TODO: Capture failed recvs
-        """
-        try:
-            data = self.socket.recv(buf_size)
-            return data
-        except socket.error:
-            raise
-        except socket.timeout:
-            raise
 
+    def recv(self):
+        # Packet length is packed into 2 bytes at the start.
+        packet_len = self.socket.recv(2)
+        if not packet_len:
+            return
+        # Add the first two bytes to the packet
+        packet = packet_len
+        # Extract the packet length.
+        packet_len = struct.unpack('>H', packet_len)[0]
+
+        # Receive until the entire packet has been received.
+        received_len = to_get = 0
+        while received_len < packet_len:
+            to_get = packet_len - received_len
+            packet += self.socket.recv(to_get)
+            received_len = len(packet)
+
+        return packet
+    
     def parse_packet(self, packet):
         """ Core function to tie together all of the packet parsing. """
         packet_id = self.packet_parser.parse_id(packet)
@@ -568,7 +574,7 @@ class PacketParser:
                 CString('u_account_icon')
             )
         r = c.parse(packet)
-        u = User(r.id, r.u_nickname, r.u_status, r.u_flags, r.u_chat_icon,
+        u = User(r.u_id, r.u_nickname, r.u_status, r.u_flags, r.u_chat_icon,
                       r.u_nick_colour, r.u_account_icon)
         return {'channel_id': r.channel_id, 'user': u}
 
@@ -594,23 +600,25 @@ class PacketParser:
         The initial status packet contains information for all available buddy and clan members, 
         as well as some server statuses and matchmaking settings.
         """
-        #c = Struct('initial_status',
-                #ULInt32('user_count'),
-                #MetaRepeater(lambda ctx: ctx['user_count'],
-                    #Struct('users',
-                        #ULInt32('id'),
-                        #Byte('status'),
-                        #Byte('flags'),
-                        #If(lambda ctx: ctx['status'] == HON_STATUS_INGAME or ctx['status'] == 5,
-                           #CString('server'),
-                           #CString('game_name')
-                        #)
-                    #)
-                #),
-                
-
-
-        return {}
+        c = Struct('initial_status',
+                ULInt32('user_count'),
+                MetaRepeater(lambda ctx: ctx['user_count'],
+                    Struct('users',
+                        ULInt32('id'),
+                        Byte('status'),
+                        Byte('flags'),
+                        If(lambda ctx: ctx['status'] == HON_STATUS_INGAME or ctx['status'] == HON_STATUS_INLOBBY,
+                           Struct('match_info',
+                               CString('server'),
+                               CString('game_name')
+                            )
+                        )
+                    )
+                )
+            )
+        r = c.parse(packet)
+        users = [{u.id: {'status': u.status, 'flags': u.flags}} for u in r.users]
+        return {'users': users}
 
     def parse_update_status(self, packet):
         pass
@@ -628,7 +636,7 @@ class PacketParser:
             `player`    The name of the player who sent the whisper.
             `message`   The full message sent in the whisper
         """
-        c = Struct("packet", String("name"), CString("message"))
+        c = Struct("packet", CString("name"), CString("message"))
         r = c.parse(packet)
         return {"player" : r.name, "message" : r.message }
 

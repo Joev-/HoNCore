@@ -33,13 +33,13 @@ Buddy List
 	* An array of arrays of buddies
 	For each `buddy` in the array.
 		* Account ID 	The Account ID of the user that this buddy belongs to.
-		* Buddy ID 		Not sure... Not account IDs.
-		* Status 		The buddie's status, in-game, online, or offline.
+		* Buddy ID 		The Account ID of the buddy.
+		* Status 		Unknown.
 		* Group			Unknown.
 		* Create Time	The time that the buddy was added, as a UNIX timestamp.
 		* Expire Time 	Unknown.
 		* Nickname		The nickname of the buddy.
-		* Standing		Unknown.
+		* Standing		Represents if the user is verified or not. 1 = Not verified, 2 = Verified, 3 = Legacy
 		* Clan Name 	The name of the clan that this buddy is in.
 		* Clan Tag 		The tag of the clan that this buddy is in.
 
@@ -48,15 +48,15 @@ Ignored List
 	* An array of arrays of ignored users.
 	For each `ignored user` in the array.
 		* Account ID 	The Account ID of the user that this ignored user belong to.
-		* Ignored ID 	Not sure.. Not acount IDs.
-		* Nickname 		The nickname of the ignored user.
+		* Ignored ID 	The Account ID of the ignored user.
+		* Nickname 		The Nickname of the ignored user.
 
 Banned List
 	* Account ID 	The Account ID of the user that this list belong to.
 	* An array of arrays of banned users.
 	For each `banned user` in the array.
 		* Account ID 	The Account ID of the user that this ignored user belong to.
-		* Banned ID 	Not sure... Not account IDs.
+		* Banned ID 	The Account ID of the banned user.
 		* Reason 		The reason given when banning a user.
 		* Nickname 		The nickname of the banned user.
 
@@ -64,8 +64,8 @@ Account Information
 	* Account ID 	The Account ID of the user that this info belong to.
 	An array of the account information
 		* Account ID
-		* Standing
-		* Level
+		* Standing				Represents if the user is verified or not. 1 = Not verified, 2 = Verified, 3 = Legacy
+		* Level	
 		* Level Exp
 		* Discos				Disconnects I assume..
 		* Possible Discos 		
