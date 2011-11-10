@@ -198,8 +198,8 @@ class ChatSocket:
         while received_len < packet_len:
             to_get = packet_len - received_len
             packet += self.socket.recv(to_get)
-            received_len = len(packet)
-
+            received_len = len(packet) - 2
+        
         return packet
     
     def parse_packet(self, packet):
@@ -234,8 +234,21 @@ class ChatSocket:
     def send_pong(self):
         self.send(struct.pack('H', HON_CS_PONG))
     
-    def send_channel_message(self):
-        pass
+    def send_channel_message(self, message, channel_id):
+        """
+        Sends the messae to the channel specified by the id.
+        Takes 2 parameters.
+            `message`       A string containing the message.
+            `channel_id`    An integer containing the id of the channel.
+        Packet ID is 0x03 or HON_CS_CHANNEL_MSG.
+        """
+        c = Struct("message",
+                ULInt16("id"),
+                String("message", len(message)+1, encoding="utf8", padchar="\x00"),
+                ULInt32("channel_id")
+            )
+        packet = c.build(Container(id=HON_CS_CHANNEL_MSG, message=unicode(message), channel_id=channel_id))
+        self.send(packet)
     
     def send_whisper(self, player, message):
         """
@@ -247,9 +260,9 @@ class ChatSocket:
         """
 
         c = Struct("whisper",
-           ULInt16("id"),
-           String("player", len(player)+1, encoding="utf8", padchar="\x00"),
-           String("message", len(message)+1, encoding="utf8", padchar="\x00")
+               ULInt16("id"),
+               String("player", len(player)+1, encoding="utf8", padchar="\x00"),
+               String("message", len(message)+1, encoding="utf8", padchar="\x00")
         )
         packet = c.build(Container(id=HON_CS_WHISPER, player=unicode(player), message=unicode(message)))
         self.send(packet)
@@ -266,14 +279,14 @@ class ChatSocket:
             `invis`         A boolean value, determening if invisible mode is used.
         """
         c = Struct("login",
-            ULInt16("id"),
-            ULInt32("aid"),
-            String("cookie", len(cookie)+1, encoding="utf8", padchar = "\x00"),
-            String("ip", len(ip)+1, encoding="utf8", padchar = "\x00"),
-            String("auth", len(auth_hash)+1, encoding="utf8", padchar = "\x00"),
-            ULInt32("proto"),
-            ULInt8("unknown"),
-            ULInt32("mode")
+                ULInt16("id"),
+                ULInt32("aid"),
+                String("cookie", len(cookie)+1, encoding="utf8", padchar = "\x00"),
+                String("ip", len(ip)+1, encoding="utf8", padchar = "\x00"),
+                String("auth", len(auth_hash)+1, encoding="utf8", padchar = "\x00"),
+                ULInt32("proto"),
+                ULInt8("unknown"),
+                ULInt32("mode")
         )
 
         packet = c.build(Container(id=HON_CS_AUTH_INFO, aid=account_id, cookie=unicode(cookie), ip=unicode(ip), 

@@ -320,6 +320,16 @@ class HoNClient(object):
         return motd
 
     """ The core client functions."""
+    def send_channel_message(self, message, channel_id):
+        """
+        Sends a message to a specified channel.
+        Takes 2 parameters.
+            `message`   The message to be send.
+            `channel_id`   The id of the channel to send it to.
+        """
+        # TODO: Implement throttling for messages.
+        self.__chat_socket.send_channel_message(message, channel_id)
+
     def join_channel(self, channel, password=None):
         """
         Sends a request to join a channel.

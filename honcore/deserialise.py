@@ -75,19 +75,17 @@ def parse(raw):
 
     try:
         account.buddy_list, users = get_buddies(data['buddy_list'][account.account_id])
+        for user in users:
+            new_users.append(user)
     except KeyError:
         pass
-    
-    for user in users:
-        new_users.append(user)
 
     try:
         account.clan_member_list, users = get_clan_memebrs(data['clan_member_info'])
+        for user in users:
+            new_users.append(user)
     except KeyError:
         pass
-    
-    for user in users:
-        new_users.append(user)
 
     try:
         account.ban_list = get_ban_list(data['banned_list'])
@@ -103,7 +101,18 @@ def parse(raw):
 
 def get_basic_info(data):
     try:
-       account = Account(int(data['super_id']), int(data['account_id']), data['nickname'], data['cookie'], data['auth_hash'], data['chat_url'], data['ip'])
+        super_id = int(data['super_id'])
+        account_id = int(data['account_id'])
+        try:
+            clan_tag = "[%s]" % data['clan_member_info']['tag']
+        except KeyError:
+            clan_tag = ''
+        nickname = "%s%s" % (clan_tag, data['nickname'])
+        cookie = data['cookie']
+        auth_hash = data['auth_hash']
+        chat_url = data['chat_url']
+        ip = data['ip']
+        account = Account(super_id, account_id, nickname, cookie, auth_hash, chat_url, ip)
     except KeyError, e:
         raise
     return account
