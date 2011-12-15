@@ -6,14 +6,14 @@ Client settings/configuration
 
 The client provides a method which allows modification of it's settings. The default settings should prove to be good enough, but optionally things like logging in as invisible or updating the chat protocol version may be desirable.
 The settings available and their default values are :
-	
-	Name 			Default 								Desc
-	chatport 		11031									The port used for the chat server connection. 
-	chatver 		0x0E									The chat protocol version sent when authenticating.
-	invis 			False									A flag used to toggle invisible mode when logging in.
-	masterserver 	http://masterserver.hon.s2games.com/	The master server used for HTTP requests.
-	basicserver 	http://heroesofnewerth.com/				The basic server used for some HTTP requests.
-	honver			2.0.39.1 								The version of HoN, used when setting the user agent.
+    
+    Name            Default                                 Desc
+    chatport        11031                                   The port used for the chat server connection. 
+    chatver         0x0E                                    The chat protocol version sent when authenticating.
+    invis           False                                   A flag used to toggle invisible mode when logging in.
+    masterserver    http://masterserver.hon.s2games.com/    The master server used for HTTP requests.
+    basicserver     http://heroesofnewerth.com/             The basic server used for some HTTP requests.
+    honver          2.0.39.1                                The version of HoN, used when setting the user agent.
 
 The server addresses MUST contain the forward slash at the end.
 
@@ -24,10 +24,10 @@ Exceptions
 ------------------------------------
 
 Three exceptions can be caught
-	* HoNException
-	* MasterServerError
-	* ChatServerError
-	* HoNConfigError - To be considered.
+    * HoNException
+    * MasterServerError
+    * ChatServerError
+    * HoNConfigError - To be considered.
 
 All exceptions raised will provide an error code and an error message, available through the attributes 'code' and 'error'.
 

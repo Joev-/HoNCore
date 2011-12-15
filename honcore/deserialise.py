@@ -67,11 +67,28 @@ def parse(raw):
         if e == 'unexpected opcode':
             raise MasterServerError(108)
     
+    # If an auth key is found then there has been an authentication error.
     if 'auth' in data:
-        raise MasterServerError(102)
+        raise MasterServerError(102) # Incorrect username/password
     
-    account = get_basic_info(data)
+    """
+    When the servers are down for maintenance the following array is returned
+    by the master server:
+        a:2{i:0,b:1,s:16:"vested_threshold",i:5;}
+    See if that is true for all maintenance periods and maybe use that to consider
+    when maintenance is taking place.
+    """
+
+    try:
+        account = get_basic_info(data)
+    except KeyError:
+        raise MasterServerError(101) # Could not obtain login data
+
+    # List of new user objects for the client to learn about.
     new_users = []
+
+
+    # Note: Try/Excepts are executed quicker than if 'xx' in data statements.
 
     try:
         account.buddy_list, users = get_buddies(data['buddy_list'][account.account_id])

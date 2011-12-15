@@ -85,7 +85,7 @@ _errormap = {
     104 : 'Connection to the master server timed out.',
     105 : 'Connection to the master server was rejected.',
     106 : 'Master server failed to receieve logout request, forcing logout.',
-    107 : 'Requester HTTP error.', # Don't leave this in, expand it to handle each different HTTP/URL Error.
+    107 : 'Requester HTTP error.', # Don't leave this in, expand it to handle each different HTTP/URL Error?
     108 : 'Unexpected opcode when parsing PHP serialisation.',
     109 : 'Bad HTTP status code.',
     110 : 'Connection reset by peer', # Good sign it's down, it's dropping connections?
