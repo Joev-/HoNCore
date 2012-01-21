@@ -8,16 +8,14 @@ from exceptions import *
 from httplib import BadStatusLine
 
 
-""" 
-Sends requests to the HoN master servers.
-These are just basic HTTP get requests which return serialised php.
+""" Sends requests to the HoN master servers.
+    These are just basic HTTP get requests which return serialised php.
 
-A version of '2.1.0' forced the connection to be dropped by the server, changing it back to a 4 'digit' version fixes. Guess the version string
-must be 4 digits..
+    A version of '2.1.0' forced the connection to be dropped by the server, changing it back to a 4 'digit' version fixes. Guess the version string
+    must be 4 digits..
 
-TODO:
-     * If sending a logout request times out then it's a bit... confusing as to what's going on. Could need cleaning up.
-
+    TODO:
+         * If sending a logout request times out then it's a bit... confusing as to what's going on. Could need cleaning up.
 """
 _config_defaults = {
     "masterserver" : "http://masterserver.hon.s2games.com/", 
@@ -68,9 +66,8 @@ class Requester:
         return self.httpget(self.config['masterserver'], url)
 
     def logout(self, cookie):
-        """ 
-        Sends a logout 'request'. 
-        Returns a:2:{i:0;b:1;s:12:"client_disco";s:2:"OK";} on a successful logout.
+        """ Sends a logout 'request'. 
+            Returns a:2:{i:0;b:1;s:12:"client_disco";s:2:"OK";} on a successful logout.
         """
         url = "client_requester.php?f=logout&cookie=%s" % cookie 
         return self.httpget(self.config['masterserver'], url)
@@ -114,3 +111,4 @@ class Requester:
 
     def patcher(self, version, os, arch):
         pass
+

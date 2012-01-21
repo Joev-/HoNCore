@@ -14,7 +14,7 @@ __all__ = ['HoNClient']
 
 _config_defaults = {
     "chatport" : 11031, 
-    "protocol" : 19, 
+    "protocol" : 21, 
     "invis" : False,
 }
 
@@ -32,7 +32,10 @@ class HoNClient(object):
         self.__users = {}
 
     def __create_events(self):
-        """ Create each event that can be triggered by the client. """
+        """ Create each event that can be triggered by the client.
+            As more packets are reverse engineered they should be added here so that 
+            the client can handle them.
+        """
         self.__events[HON_SC_AUTH_ACCEPTED] = Event("Auth Accepted", HON_SC_AUTH_ACCEPTED)
         self.__events[HON_SC_PING] = Event("Ping", HON_SC_PING)
         self.__events[HON_SC_CHANNEL_MSG] = Event("Channel Message", HON_SC_CHANNEL_MSG)
@@ -41,17 +44,13 @@ class HoNClient(object):
         self.__events[HON_SC_LEFT_CHANNEL] = Event("Left Channel", HON_SC_LEFT_CHANNEL)
         self.__events[HON_SC_WHISPER] = Event("Whisper", HON_SC_WHISPER)
         self.__events[HON_SC_PM] = Event("Private Message", HON_SC_PM)
-
         self.__events[HON_SC_MESSAGE_ALL] = Event("Server Message", HON_SC_MESSAGE_ALL)
-    
         self.__events[HON_SC_TOTAL_ONLINE] = Event("Total Online", HON_SC_TOTAL_ONLINE)
-
         self.__events[HON_SC_PACKET_RECV] = Event("Packet Received", HON_SC_PACKET_RECV)
 
     def __setup_events(self):
-        """
-        Transparent handling of some data is needed so that the client
-        can track things such as users and channels.
+        """ Transparent handling of some data is needed so that the client
+            can track things such as users and channels.
         """
         self.connect_event(HON_SC_JOINED_CHANNEL, self.__on_joined_channel, priority=1)
         self.connect_event(HON_SC_ENTERED_CHANNEL, self.__on_entered_channel, priority=1)
@@ -65,25 +64,26 @@ class HoNClient(object):
                 user.flags = users[account_id]['flags']
     
     def __on_joined_channel(self, channel, channel_id, topic, operators, users):
-        """
-        Channel names, channel ids, user nicks and user account ids need to be
-        contained in a hash table/dict so they can be looked up later when needed.
+        """ Channel names, channel ids, user nicks and user account ids need to be
+            contained in a hash table/dict so they can be looked up later when needed.
         """
         self.__channels[channel_id] = channel
-
         for user in users:
             if user.account_id not in self.__users:
                 self.__users[user.account_id] = user
 
     def __on_entered_channel(self, channel_id, user):
-        """
-        Transparently add the id and nick of the user who entered the channel to
-        the users dictionary.
+        """ Transparently add the id and nick of the user who entered the channel to
+            the users dictionary.
         """
         if user.account_id not in self.__users:
             self.__users[user.account_id] = user
 
     def _configure(self, *args, **kwargs):
+        """ Set up some configuration for the client and the requester. 
+            The requester configuration is not really needed, but just incase
+            it does change in the future.
+        """
         config_map = {
             "chatport" : self.config,
             "protocol" : self.config,
@@ -105,9 +105,6 @@ class HoNClient(object):
                 * Could not connect to the masterserver.
                 * Could not obtain login data
                 * Incorrect username/password
-            TODO:   Handle HTTP errors here somewhere.
-                    Some can be handled easily with a retry, but if an error shows that the server will never 
-                    accept a connection in the near future then it should stop trying to connect.
         """
         attempts = 1
         while True:
@@ -170,13 +167,14 @@ class HoNClient(object):
 
     """ Chatserver related functions"""
     def _chat_connect(self):
-        """ 
-        Sends the initial authentication request to the chatserver via the chat socket object.
-        Ensures the user information required for authentication is available, otherwise raises
-        a ChatServerError #205 (No cookie/auth hash provided)
-        If for some reason a ChatSocket does not exist then one is created.
-        Connects that chat socket to the correct address and port. Any exceptions are raised to the top method.
-        Finally sends a valid authentication packet. Any exceptions are raised to the top method.
+        """ Sends the initial authentication request to the chatserver via the chat socket object.
+
+            Ensures the user information required for authentication is available, otherwise raises
+            a ChatServerError #205 (No cookie/auth hash provided)
+
+            If for some reason a ChatSocket does not exist then one is created.
+            Connects that chat socket to the correct address and port. Any exceptions are raised to the top method.
+            Finally sends a valid authentication packet. Any exceptions are raised to the top method.
         """
         if self.account == None or self.account.cookie == None or self.account.auth_hash == None:
             raise ChatServerError(205)
@@ -192,9 +190,7 @@ class HoNClient(object):
                 raise ChatServerError(201)
             
         # Send initial authentication request to the chat server.
-        # TODO: If the chat server did not respond to the auth request then increment the chat protocol version.
-        # Maybe should be handled by the true client. It would be nice for HoNStatus to be able to see that the protocol was incremented..
-        # However maybe it's not so important because I should check it each patch regardless.
+        # TODO: If the chat server did not respond to the auth request after a set number of attempts then increment the chat protocol version.
         try:
             self.__chat_socket.send_auth_info(self.account.account_id, self.account.cookie, self.account.ip, self.account.auth_hash,  self.config['protocol'], self.config['invis'])
         except ChatServerError:
@@ -213,7 +209,7 @@ class HoNClient(object):
         raise ChatServerError(200) # Server did not respond to the authentication request 
         
     def _chat_disconnect(self):
-        """ Disconnect gracefully from the chat server and close and remove the socket."""
+        """ Disconnect gracefully from the chat server and close & remove the socket."""
         if self.__chat_socket is not None:
             self.__chat_socket.connected = False # Safer to stop the thread with this first.
             try:
@@ -231,14 +227,16 @@ class HoNClient(object):
 
     @property
     def is_connected(self):
-        """ 
-        Test for chat server connection. 
-        The line of thought here is, the client can not be connected to the chat server
-        until it is authenticated, the chat socket can be connected as long as the server
-        doesn't deny or drop the connection.
-        Once a user is logged in to a HoN client, they can be logged in but not connected.
-        This would happen if a chat server connection is dropped unexpectedly or is never initialised.
-        The main program would use this to check for that and then handle it itself.
+        """ Test for chat server connection. 
+
+            The line of thought here is, the client can not be connected to the chat server
+            until it is authenticated, the chat socket can be connected as long as the server
+            doesn't deny or drop the connection.
+
+            Once a user is logged in to a HoN client, they can be logged in but not connected.
+
+            This would happen if a chat server connection is dropped unexpectedly or is never initialised.
+            The main program would use this to check for that and then handle it itself.
         """
         # Check the socket exists.
         if self.__chat_socket is None:
@@ -254,9 +252,8 @@ class HoNClient(object):
 
     """ Message of the day related functions"""
     def motd_get(self):
-        """ 
-        Requests the message of the day entries from the server and then pushes them through motd_parse.
-        Returns a dict of motd entries.
+        """ Requests the message of the day entries from the server and then pushes them through motd_parse.
+            Returns a dict of motd entries.
         """
         raw = self.__requester.motd()
         try:
@@ -266,28 +263,27 @@ class HoNClient(object):
         return self.__motd_parse(raw)
 
     def __motd_parse(self, raw):
-        """ 
-        Parses the message of the day entries into a dictionary of the format:
-        motd = {
-            motd_list = [
-                {
-                    ["title"] = "Item 1 title",
-                    ["author"] = "MsPudding",
-                    ["date"] = "6/30/2011"
-                    ["body"] = "This is the body of the message including line feeds"
-                },
-                {
-                    ["title"] = "Item 2 title", 
-                    ["author"] = "Konrar",
-                    ["date"] = "6/29/2011",
-                    ["body"] = "This is the body text Sometimes there are ^rColours^*"
-                }
-            ],
-            image = "http://icb.s2games.com/motd/4e67cffcc959e.jpg",
-            server_data = "We are aware of the server issues....",
-            honcast = 0
-        }
-        The first index will always be the newest....... Right?
+        """ Parses the message of the day entries into a dictionary of the format:
+            motd = {
+                motd_list = [
+                    {
+                        ["title"] = "Item 1 title",
+                        ["author"] = "MsPudding",
+                        ["date"] = "6/30/2011"
+                        ["body"] = "This is the body of the message including line feeds"
+                    },
+                    {
+                        ["title"] = "Item 2 title", 
+                        ["author"] = "Konrar",
+                        ["date"] = "6/29/2011",
+                        ["body"] = "This is the body text Sometimes there are ^rColours^*"
+                    }
+                ],
+                image = "http://icb.s2games.com/motd/4e67cffcc959e.jpg",
+                server_data = "We are aware of the server issues....",
+                honcast = 0
+            }
+            The first index will always be the newest....... Right?
         """
         motd = {'motd_list': [], 'image': '', 'server_data': '', 'honcast': 0}
         # Split the full string into a list of entries.
@@ -304,21 +300,20 @@ class HoNClient(object):
 
     """ The core client functions."""
     def send_channel_message(self, message, channel_id):
-        """
-        Sends a message to a specified channel.
-        Takes 2 parameters.
-            `message`   The message to be send.
-            `channel_id`   The id of the channel to send it to.
+        """ Sends a message to a specified channel.
+            Takes 2 parameters.
+                `message`   The message to be send.
+                `channel_id`   The id of the channel to send it to.
         """
         # TODO: Implement throttling for messages.
         self.__chat_socket.send_channel_message(message, channel_id)
 
     def join_channel(self, channel, password=None):
-        """
-        Sends a request to join a channel.
-        Takes 2 paramters.
-            `channel`   A string containing the channel name.
-            `password`  The optional password required to join the channel.
+        """ Sends a request to join a channel.
+            
+            Takes 2 paramters.
+                `channel`   A string containing the channel name.
+                `password`  The optional password required to join the channel.
         """
         if password:
             self.__chat_socket.send_join_channel_password(channel, password)
@@ -326,37 +321,31 @@ class HoNClient(object):
             self.__chat_socket.send_join_channel(channel)
 
     def send_whisper(self, player, message):
-        """ 
-        Sends the message to the player.
-        Takes 2 parameters.
-            `player`    A string containing the player's name.
-            `message`   A string containing the message.
+        """ Sends the message to the player.
+            Takes 2 parameters.
+                `player`    A string containing the player's name.
+                `message`   A string containing the message.
         """
         self.__chat_socket.send_whisper(player, message)
 
     def send_private_message(self, player, message):
-        """
-        Sends the message to the player.
-        Takes 2 parameters.
-            `player`    A string containing the player's name.
-            `message`   A string containing the message.
+        """ Sends the message to the player.
+            Takes 2 parameters.
+                `player`    A string containing the player's name.
+                `message`   A string containing the message.
         """
         self.__chat_socket.send_private_message(player, message)
 
     """ Utility functions """
     def connect_event(self, event_id, method, priority=5):
-        """
-        Wrapper method for connecting events.
-        """
+        """ Wrapper method for connecting events. """
         try:
             self.__events[event_id].connect(method, priority)
         except KeyError:
             raise HoNCoreError(13) # Unknown event ID 
     
     def disconnect_event(self, event_id, method):
-        """
-        Wrapper method for disconnecting events.
-        """
+        """ Wrapper method for disconnecting events. """
         try:
             self.__events[event_id].disconnect(method)
         except HoNCoreError, e:
@@ -366,9 +355,8 @@ class HoNClient(object):
             raise HoNCoreError(13) # Unknown event ID
 
     def id_to_channel(self, channel_id):
-        """
-        Wrapper function to return the channel name for the given ID.
-        If no channel was found then return None
+        """ Wrapper function to return the channel name for the given ID.
+            If no channel was found then return None
         """
         try:
             return self.__channels[channel_id]
@@ -376,10 +364,8 @@ class HoNClient(object):
             return None
 
     def id_to_nick(self, account_id):
-        """
-        Wrapper function to return the nickname for the user associated
-        with that account ID.
-        If no nickname was found then return None
+        """ Wrapper function to return the nickname for the user associated with that account ID.
+            If no nickname was found then return None
         """
         try:
             return self.__users[account_id].nickname
@@ -387,10 +373,8 @@ class HoNClient(object):
             return None
 
     def id_to_user(self, account_id):
-        """
-        Wrapper function to return the user object for the user
-        associated with that account ID.
-        If no user was found then return None
+        """ Wrapper function to return the user object for the user associated with that account ID.
+            If no user was found then return None
         """
         try:
             return self.__users[account_id]
@@ -409,31 +393,29 @@ class HoNClient(object):
             print self.__users[aid]
 
 class Event:
-    """
-    Event objects represent network level events which can have functions connected to them, which
-    are then triggered when the event occurs.
+    """ Event objects represent network level events which can have functions connected to them, which
+        are then triggered when the event occurs.
 
-    A standard set of events are initialised by the library which should cover nearly everything.
-    The core client will store a list of the standard events in client.events.
+        A standard set of events are initialised by the library which should cover nearly everything.
+        The core client will store a list of the standard events in client.events.
 
-    The front end client should then connect these events to functions by calling the connect 
-    method on the specific event object. e.g.
+        The front end client should then connect these events to functions by calling the connect 
+        method on the specific event object. e.g.
 
-    self.events.login.connect(self.on_login_event)
+        self.events.login.connect(self.on_login_event)
 
-    The functions are stored in a list called handlers, each function is ran when the event is triggered.
+        The functions are stored in a list called handlers, each function is ran when the event is triggered.
 
-    The functions can be assigned a priority so that they are executed in an order. This is useful for
-    ensuring that lower level network/core client related functions are executed first.
+        The functions can be assigned a priority so that they are executed in an order. This is useful for
+        ensuring that lower level network/core client related functions are executed first.
 
-    On the networking side, the events are triggered after the packet data has been parsed and constructed into useful data.
-    The process would be as follows:
-    
-        packet = sock.recv(512)
-        id = parse_id(packet)
-        useful_data = raw_parse(id, packet)
-        event.trigger(useful_data)
-
+        On the networking side, the events are triggered after the packet data has been parsed and constructed into useful data.
+        The process would be as follows:
+        
+            packet = sock.recv(512)
+            id = parse_id(packet)
+            useful_data = raw_parse(id, packet)
+            event.trigger(useful_data)
     """
 
     class ConnectedMethod:
@@ -453,18 +435,16 @@ class Event:
         return "<%s: %s>" % (self.packet_id, self.name)
     
     def connect(self, function, priority=5):
-        """
-        Connects a function to a specific event.
-        The event is given as an english name, which corresponds
-        to a constant in the packet definition file.
+        """ Connects a function to a specific event.
+            The event is given as an english name, which corresponds
+            to a constant in the packet definition file.
         """
         self.handlers.append(self.ConnectedMethod(function, priority))
 
     def disonnect(self, method):
-        """
-        Hopefully it can be used to remove event handlers from this event
-        object so they are no longer triggered. Useful if say, an event only 
-        needs to be triggered once, for a reminder or such.
+        """ Hopefully it can be used to remove event handlers from this event
+            object so they are no longer triggered. Useful if say, an event only 
+            needs to be triggered once, for a reminder or such.
         """
         for cm in self.handlers:
             if cm.method == method:
@@ -474,9 +454,8 @@ class Event:
         pass
     
     def trigger(self, **data):
-        """
-        Sorts the connected handlers based on their priority and calls each one in turn,
-        passing the dictionary of keyword arguments, or alternatively with no arguments.
+        """ Sorts the connected handlers based on their priority and calls each one in turn,
+            passing the dictionary of keyword arguments, or alternatively with no arguments.
         """
         for cm in sorted(self.handlers, key=lambda c: c.priority):
             f = cm.method

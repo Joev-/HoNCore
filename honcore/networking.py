@@ -11,11 +11,10 @@ from lib.construct import *
 
 
 class SocketListener(threading.Thread):
-    """
-    A threaded listener class. Enables the receiving and parsing
-    of packets to be done in the background.
-    Receives the packet and in an addition thread parses the packet
-    and triggers any event handlers.
+    """ A threaded listener class. Enables the receiving and parsing
+        of packets to be done in the background.
+        Receives the packet and in an addition thread parses the packet
+        and triggers any event handlers.
     """
     def __init__(self, chat_socket):
         threading.Thread.__init__(self, name='SocketListener')
@@ -44,17 +43,16 @@ class SocketListener(threading.Thread):
                 break
 
 class ChatSocket:
-    """
-    Represents the socket connected to the chat server.
-    This object will be created once with the client, and only one will 
-    be maintained, however the socket and listener will be re-created for
-    each connection used. GC should pick up the old and unused ones.
+    """ Represents the socket connected to the chat server.
+        This object will be created once with the client, and only one will 
+        be maintained, however the socket and listener will be re-created for
+        each connection used. GC should pick up the old and unused ones.
 
-    The ChatSocket holds two state flags.
-        `connected` Represents the state of the actual socket.
-        `authenticated` Represents the state of the chat server, and if it 
-                        is happy to communicate.
-    Both states are used to consider if the connection is available.
+        The ChatSocket holds two state flags.
+            `connected` Represents the state of the actual socket.
+            `authenticated` Represents the state of the chat server, and if it 
+                            is happy to communicate.
+        Both states are used to consider if the connection is available.
     """
     def __init__(self, client_events):
         self.socket = None
@@ -72,31 +70,29 @@ class ChatSocket:
 
     @property
     def is_authenticated(self):
-        """ 
-        The ChatSocket becomes authenticated with the Chat Server once
-        the `auth_accepted` packet has been received. The ChatSocket will
-        then be authenticated until the connection is lost.
+        """ The ChatSocket becomes authenticated with the Chat Server once
+            the `auth_accepted` packet has been received. The ChatSocket will
+            then be authenticated until the connection is lost.
         """
         return self.authenticated
 
     @property
     def is_connected(self): 
-        """
-        Upon forgetting to connect the ping handler, it is possible to
-        see the effects of a ping timeout. This means the socket can be terminated
-        early by the server, but at this time it will just leave the program
-        hanging. This is_connected method needs to be expanded to check for ping
-        timeouts possibly, or simply if the socket is still connected or the 
-        socket listener is still running.
+        """ Upon forgetting to connect the ping handler, it is possible to
+            see the effects of a ping timeout. This means the socket can be terminated
+            early by the server, but at this time it will just leave the program
+            hanging. This is_connected method needs to be expanded to check for ping
+            timeouts possibly, or simply if the socket is still connected or the 
+            socket listener is still running.
 
-        28.10.11 -- There seems to be a bug with HoN's chat server. 
-        When two clients wish to connect to the chat server with the same
-        credentials, one will get the connection, while the other will enter
-        a strange loop of "Connecting.... Disconnected.." 
-        The same can be seen using the S2 client and my own clients.
-        The behaviour I remember and would expect is that, since each client's reconnect
-        cycle is staggered by 30 seconds, the connection would ping-poing between the two
-        clients every 30 seconds. Each client would hold the connection for 30 seconds.
+            28.10.11 -- There seems to be a bug with HoN's chat server. 
+            When two clients wish to connect to the chat server with the same
+            credentials, one will get the connection, while the other will enter
+            a strange loop of "Connecting.... Disconnected.." 
+            The same can be seen using the S2 client and my own client.
+            The behaviour I remember and would expect is that, since each client's reconnect
+            cycle is staggered by 30 seconds, the connection would ping-poing between the two
+            clients every 30 seconds. Each client would hold the connection for 30 seconds.
         """
         # The socket has been broken early.
         if self.listener.stopped is True and self.connected is True:
@@ -105,11 +101,10 @@ class ChatSocket:
         return self.connected
 
     def connect(self, address, port):
-        """
-        Creates a connection to the chat server and starts listening for packets.
-        At the moment it is VITAL that the authentication is sent within a second or two
-        of connecting to the socket, otherwise it will simply hang up.
-        But this is done anyway, in the client's connect event.
+        """ Creates a connection to the chat server and starts listening for packets.
+            At the moment it is VITAL that the authentication is sent within a second or two
+            of connecting to the socket, otherwise it will simply hang up.
+            But this is done anyway, in the client's connect event.
         """
         try:
             self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -130,11 +125,10 @@ class ChatSocket:
         self.listener.start()
 
     def disconnect(self):
-        """
-        Disconnecting should not fail, it's a pretty forced procedure.
-        Set the internal state of the socket to be disabled, and set
-        authenticated to False.
-        Clear the socket object and listener so they can be dereferenced.
+        """ Disconnecting should not fail, it's a pretty forced procedure.
+            Set the internal state of the socket to be disabled, and set
+            authenticated to False.
+            Clear the socket object and listener so they can be dereferenced.
         """
 
         self.connected = False
@@ -153,10 +147,9 @@ class ChatSocket:
         self.listener = None
     
     def send(self, data):
-        """ 
-        Wrapper send method. 
-        TODO: Capture failed sends.
-        TODO: Possibly check for the authentication first, and authenticate if required.
+        """ Wrapper send method. 
+            TODO: Capture failed sends.
+            TODO: Possibly check for the authentication first, and authenticate if required.
         """
         #print "Sending on socket %s from thread %s" % (self.socket, threading.currentThread().getName())
         try:
@@ -218,12 +211,11 @@ class ChatSocket:
         self.send(struct.pack('H', HON_CS_PONG))
     
     def send_channel_message(self, message, channel_id):
-        """
-        Sends the messae to the channel specified by the id.
-        Takes 2 parameters.
-            `message`       A string containing the message.
-            `channel_id`    An integer containing the id of the channel.
-        Packet ID is 0x03 or HON_CS_CHANNEL_MSG.
+        """ Sends the messae to the channel specified by the id.
+            Takes 2 parameters.
+                `message`       A string containing the message.
+                `channel_id`    An integer containing the id of the channel.
+            Packet ID is 0x03 or HON_CS_CHANNEL_MSG.
         """
         c = Struct("message",
                 ULInt16("id"),
@@ -234,12 +226,11 @@ class ChatSocket:
         self.send(packet)
     
     def send_whisper(self, player, message):
-        """
-        Sends the message to the player in the form of a whisper.
-        Takes 2 parameters.
-            `player`    A string containing the player's name.
-            `message`   A string containing the message.
-        Packet ID is 0x08 or HON_CS_WHISPER.
+        """ Sends the message to the player in the form of a whisper.
+            Takes 2 parameters.
+                `player`    A string containing the player's name.
+                `message`   A string containing the message.
+            Packet ID is 0x08 or HON_CS_WHISPER.
         """
 
         c = Struct("whisper",
@@ -251,15 +242,14 @@ class ChatSocket:
         self.send(packet)
 
     def send_auth_info(self, account_id, cookie, ip, auth_hash, protocol, invis):
-        """ 
-        Sends the chat server authentication request.
-        Takes 6 parameters.
-            `account_id`    An integer containing the player's account ID.
-            `cookie`        A 33 character string containing a cookie.
-            `ip`            A string containing the player's IP address.
-            `auth`          A string containing an authentication hash.
-            `protocol`      An integer containing the protocol version to be used.
-            `invis`         A boolean value, determening if invisible mode is used.
+        """ Sends the chat server authentication request.
+            Takes 6 parameters.
+                `account_id`    An integer containing the player's account ID.
+                `cookie`        A 33 character string containing a cookie.
+                `ip`            A string containing the player's IP address.
+                `auth`          A string containing an authentication hash.
+                `protocol`      An integer containing the protocol version to be used.
+                `invis`         A boolean value, determening if invisible mode is used.
         """
         c = Struct("login",
                 ULInt16("id"),
@@ -292,9 +282,8 @@ class ChatSocket:
         pass
 
     def send_private_message(self, player, message):
-        """
-        Sends the message to the player in the form of a private message.
-        Packet ID: 0x1C
+        """ Sends the message to the player in the form of a private message.
+            Packet ID: 0x1C
         """
         c = Struct("private_message",
                ULInt16("id"),
@@ -306,8 +295,8 @@ class ChatSocket:
 
 
     def send_join_channel(self, channel):
-        """
-        Sends a request to join the channel.
+        """ Sends a request to join the channel.
+            Packet ID: 0x1E
         """
         c = Struct("join_channel",
                 ULInt16("id"),
@@ -320,9 +309,8 @@ class ChatSocket:
         pass
 
     def send_leave_channel(self, channel):
-        """
-        Leaves the channel `channel`.
-        Packet ID: 0x22 or HON_CS_LEAVE_CHANNEL
+        """ Leaves the channel `channel`.
+            Packet ID: 0x22 
         """
         c = Struct("leave_channel",
                ULInt16("id"),
@@ -383,9 +371,7 @@ class ChatSocket:
         pass
     
 class PacketParser:
-    """
-    A class to handle raw packet parsing.
-    """
+    """ A class to handle raw packet parsing. """
     def __init__(self):
         self.__packet_parsers = {}
         self.__setup_parsers()
@@ -439,34 +425,25 @@ class PacketParser:
         self.__add_parser(HON_SC_NOTIFICATION, self.parse_notification)
     
     def __add_parser(self, packet_id, function):
-        """ 
-        Registers a parser function for the specified packet. 
-        Ensures that only one parser exists for each packet.
+        """ Registers a parser function for the specified packet. 
+            Ensures that only one parser exists for each packet.
         """
         if packet_id in self.__packet_parsers:
             return False
         self.__packet_parsers[packet_id] = function
 
     def parse_id(self, packet):
-        """ 
-        Returns the packet's ID.
-        The ID is an unsigned short, or a 2 byte integer, which is located at bytes 3 and 4 
-        within the packet.
+        """ Returns the packet's ID.
+            The ID is an unsigned short, or a 2 byte integer, which is located at bytes 3 and 4 
+            within the packet.
         """
         return struct.unpack('H', packet[2:4])[0]
 
     def parse_data(self, packet_id, packet):
-        """
-        Pushes the packet through to a matching registered packet parser, which extracts any useful data 
-        into a dict of kwargs which can then be handed to any matching registered event handler.
+        """ Pushes the packet through to a matching registered packet parser, which extracts any useful data 
+            into a dict of kwargs which can then be handed to any matching registered event handler.
 
-        TODO: Set up a method of handling oversized packets, this needs to compared the packet size
-              given in the first 2 bytes with the amount of data received on the socket, if the sizes do not
-              match then subtract the amount received from the total expected size and tell the socket to recv
-              that new amount. This all needs to be done before passing the packet to the packet parser.
-        """
-        
-        """ Passes the packet to a packet parser so it can be parsed for data. The returned data
+            Passes the packet to a packet parser so it can be parsed for data. The returned data
             is then passed to each event handler that requests it as a list of named keywords which
             are taken as arguments.
         """
@@ -478,21 +455,24 @@ class PacketParser:
             raise HoNCoreError(12) # Unknown packet received.
     
     def parse_auth_accepted(self, packet):
-        """ The initial response from the chat server to verify that the authentication was accepted. """
+        """ The initial response from the chat server to verify that the authentication was accepted.
+            Packet ID: 0x1C00
+        """
         return {}
 
     def parse_ping(self, packet):
-        """ Pings sent every minute. Respond with pong. """
+        """ Pings sent every minute. Respond with pong. 
+            Packet ID: 0x2A00
+        """
         return {}
 
     def parse_channel_message(self, packet):
-        """
-        Triggered when a message is sent to a channel that the user
-        is currently in.
-        Returns the following:
-            `account_id`    The ID of player account who sent the message.
-            `channel_id`    The ID of the channel message was sent to.
-            `message`       The message sent.
+        """ Triggered when a message is sent to a channel that the user is currently in.
+            Returns the following:
+                `account_id`    The ID of player account who sent the message.
+                `channel_id`    The ID of the channel message was sent to.
+                `message`       The message sent.
+            Packet ID: 0x03
         """
         c = Struct('channel_message',
                    ULInt32('account_id'),
@@ -507,14 +487,14 @@ class PacketParser:
         }
     
     def parse_joined_channel(self, packet):
-        """
-        Triggered when `the user` joins a channel.
-        Returns the following:
-            `channel`       Name of the channel joined.
-            `channel_id`    The ID of the channel joined.
-            `topic`         The topic set for the channel.
-            `operators`     A list of operators in the channel and the data regarding them.
-            `users`         A list of users in the channel and data regarding them.
+        """ Triggered when `the user` joins a channel.
+            Returns the following:
+                `channel`       Name of the channel joined.
+                `channel_id`    The ID of the channel joined.
+                `topic`         The topic set for the channel.
+                `operators`     A list of operators in the channel and the data regarding them.
+                `users`         A list of users in the channel and data regarding them.
+            Packet ID: 0x04
         """
         c = Struct('changed_channel', 
                 CString('channel_name'), 
@@ -553,11 +533,11 @@ class PacketParser:
         }
 
     def parse_entered_channel(self, packet):
-        """
-        When another user joins a channel.
-        Returns the following:
-            `channel_id`    The ID of the channel that the user joined.
-            `user`          A `User` object containing the user that joined.
+        """ When another user joins a channel.
+            Returns the following:
+                `channel_id`    The ID of the channel that the user joined.
+                `user`          A `User` object containing the user that joined.
+            Packet ID: 0x05
         """
         c = Struct('entered_channel',
                 CString('u_nickname'),
@@ -578,11 +558,11 @@ class PacketParser:
         pass
 
     def parse_whisper(self, packet):
-        """ 
-        A normal whisper from anyone.
-        Returns two variables.
-            `player`    The name of the player who sent the whisper.
-            `message`   The full message sent in the whisper
+        """ A normal whisper from anyone.
+            Returns two variables.
+                `player`    The name of the player who sent the whisper.
+                `message`   The full message sent in the whisper
+            Packet ID: 0x08
         """
         c = Struct("packet", CString("name"), CString("message"))
         r = c.parse(packet)
@@ -592,9 +572,16 @@ class PacketParser:
         pass
 
     def parse_initial_status(self, packet):
-        """ 
-        The initial status packet contains information for all available buddy and clan members, 
-        as well as some server statuses and matchmaking settings.
+        """ The initial status packet contains information for all available buddy and clan members.
+            Returns a list of dictonaries containing the user id and a dictonary with their status
+            and flags.
+            `users` {
+                id: {
+                    status
+                    flag
+                }
+            }
+            Packet ID: 0x0B
         """
         c = Struct('initial_status',
                 ULInt32('user_count'),
@@ -626,11 +613,11 @@ class PacketParser:
         pass
 
     def parse_private_message(self, packet):
-        """ 
-        A private message from anyone.
-        Returns two variables.
-            `player`    The name of the player who sent the whisper.
-            `message`   The full message sent in the whisper
+        """ A private message from anyone.
+            Returns two variables.
+                `player`    The name of the player who sent the whisper.
+                `message`   The full message sent in the whisper.
+            Packet ID: 0x1C
         """
         c = Struct("packet", CString("name"), CString("message"))
         r = c.parse(packet)
@@ -724,7 +711,9 @@ class PacketParser:
         pass
     
     def parse_total_online(self, packet):
-        """ Gets the number of players online """
+        """ Gets the number of players online
+            Packet ID: 0x68
+        """
         c = Struct("players_online",
                ULInt32('count'),
                CString('regions')

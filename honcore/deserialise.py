@@ -8,29 +8,28 @@ from exceptions import *
 
 from lib import phpserialize as phpd
 
-""" Deserialises the php stuff and creates objects, not really... big... since there's this like, library... already.. """
+""" Deserialises the php stuff and creates objects, not really... big... since there's this like, library... already..
 
-""" 
-There seems to be a difference between super_id and account_id, atleast in a trial account. 
-A trial account that I created would not be able to use this program as the super_id was
-different to the account id. Replacing super_id with account_id is the fix, but as to why
-is a case to be solved.
+    There seems to be a difference between super_id and account_id, atleast in a trial account. 
+    A trial account that I created would not be able to use this program as the super_id was
+    different to the account id. Replacing super_id with account_id is the fix, but as to why
+    is a case to be solved.
 
-If a user does not have any buddies then the buddy array is structured as follows.
+    If a user does not have any buddies then the buddy array is structured as follows.
 
-buddy {
-    error {
-        "No buddies found" 
+    buddy {
+        error {
+            "No buddies found" 
+        }
     }
-}
 
-If a user has a buddy then it is structured as the following.
+    If a user has a buddy then it is structured as the following.
 
-buddy_list {
-    <account_id> {
-        <buddy_data_array>
+    buddy_list {
+        <account_id> {
+            <buddy_data_array>
+        }
     }
-}
 
 """
 
@@ -39,9 +38,8 @@ def parse_raw(raw):
     return phpd.loads(raw)
 
 def parse(raw):
-    """
-    Takes raw login data and a user account, extracts useful information
-    from the data and populates the account.
+    """ Takes raw login data and a user account, extracts useful information
+        from the data and populates the account.
     """
 
     try:
@@ -54,12 +52,11 @@ def parse(raw):
     if 'auth' in data:
         raise MasterServerError(102) # Incorrect username/password
     
-    """
-    When the servers are down for maintenance the following array is returned
-    by the master server:
-        a:2{i:0,b:1,s:16:"vested_threshold",i:5;}
-    See if that is true for all maintenance periods and maybe use that to consider
-    when maintenance is taking place.
+    """ When the servers are down for maintenance the following array is returned
+        by the master server:
+            a:2{i:0,b:1,s:16:"vested_threshold",i:5;}
+        See if that is true for all maintenance periods and maybe use that to consider
+        when maintenance is taking place.
     """
 
     try:

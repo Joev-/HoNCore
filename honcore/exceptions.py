@@ -11,10 +11,7 @@ TODO
 """
 
 class HoNException(Exception):
-    """
-    Base exception for all exceptions for this library.
-    Used when there's not a specific exception to catch.
-    """
+    """ Base exception for all exceptions for this library. """
     def __init__(self, code, *args):
         self.code = code
         self.error = _errormap[code]
@@ -23,34 +20,28 @@ class HoNException(Exception):
         return repr("Error %d: %s" % (self.code, self.error))
 
 class HoNCoreError(HoNException):
-    """
-    Exception to be used for honcore internals such as a socket error which will be handled
-    by something else inside honcore, or when a client tries to connect a method to an event
-    that does not exist.
+    """ Exception to be used for honcore internals such as a socket error which will be handled
+        by something else inside honcore, or when a client tries to connect a method to an event
+        that does not exist.
     """
     pass
 
 class HoNConfigError(HoNException):
-    """
-    Exception relating to the configuration data.
-    Can be raised if the configuration passed does not satisfy the requirements.
+    """ Exception relating to the configuration data.
+        Can be raised if the configuration passed does not satisfy the requirements.
     """
     pass
     
 class MasterServerError(HoNException):
-    """
-    Exception related to the master server. 
-    Can be raised if invalid data is returned or if the connection times out.
-
+    """ Exceptions related to the master server. 
+        Can be raised if invalid data is returned or if the connection times out.
     """
     pass
 
 class ChatServerError(HoNException):
-    """
-    Ecxception related to the chat server.
-    Can be raised if invalid data is received or if the socket times out and the
-    connection to the server is lost.
-
+    """ Ecxceptions related to the chat server.
+        Can be raised if invalid data is received or if the socket times out and the
+        connection to the server is lost.
     """
     pass
 
