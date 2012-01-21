@@ -32,6 +32,7 @@ The client object has three main methods which can be used.
 The configure method can be used to pass configuration keys and values to the client. I'd expect any programs that use it to implement their own wrapper with `.configure()` and call `._configure()` from within that wrapper.  
 
 Parameters:
+
 * `basicserver` - The root server path. Default is http://heroesofnewerth.com. Needed for message of the day grabbing.
 * `chatport` - The port that the chat server listens on. Default is 11031. Shouldn't change.
 * `honver` - The version string for HoN. Default 2.5.7.0
@@ -43,6 +44,7 @@ Parameters:
 Logs the user in to the chat server and starts handling socket events.  
 
 Paramters:
+
 * `username` - A string with the user's account user name.
 * `password` - A string with the md5 hash of the user's account password.
   
