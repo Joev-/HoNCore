@@ -11,7 +11,7 @@ My main goal was to create a light-weight client that I could run on the Desktop
 HoNCore makes use of two additional libraries.
 
 * [phpserialize version 1.2](http://pypi.python.org/pypi/phpserialize) - Used for deserializing the php serialized responses from the master server.
-* [Construct](https://github.com/MostAwesomeDude/construct) - Used for constructing and deconstructing TCP packets.
-                                                            - I have been using version 2.04, I'm not sure if later versions of construct bug HoNCore, I've not tested it recently, but I have a feeling that a previous test meant that some changes needed to be made.
+* [Construct](https://github.com/MostAwesomeDude/construct) - Used for constructing and deconstructing TCP packets.  
+** _I have been using version 2.04, I'm not sure if later versions of construct bug HoNCore, I've not tested it recently, but I have a feeling that a previous test meant that some changes needed to be made._
 
 ## Usage
