@@ -20,7 +20,7 @@ from httplib import BadStatusLine
 _config_defaults = {
     "masterserver" : "http://masterserver.hon.s2games.com/", 
     "basicserver" : "http://heroesofnewerth.com/", 
-    "version": "2.1.10.0"
+    "version": "2.5.7.0"
 }
 
 class Requester:

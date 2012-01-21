@@ -1,5 +1,8 @@
 TODO
 ERRORS
+DOCUMENTATION
+NOTES
+packet-doc
 
 # Ignore compiled python code
 *.pyc
