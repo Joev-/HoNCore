@@ -53,7 +53,7 @@ Paramters:
 
 Once the user has been logged in, the client will start sending and receiving TCP packets, and handling any received ones to the registered event handlers.
 
-I will write some documentation at a later point for those, but for now I have a very basic client example available at [BasicHoNClient](http://github.com/Joev-/BasicHoNClient/)
+I will write some documentation at a later point for those, but for now I have a very basic client example available at [BasicHoNClient](http://github.com/Joev-/basic-hon-client)
 
 ## License
 
