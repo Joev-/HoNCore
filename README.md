@@ -15,6 +15,8 @@ HoNCore makes use of two additional libraries.
 * [Construct](https://github.com/MostAwesomeDude/construct) - Used for constructing and deconstructing TCP packets.  
   * _I have been using version 2.04, I'm not sure if later versions of construct bug HoNCore, I've not tested it recently, but I have a feeling that a previous test meant that some changes needed to be made._
 
+These libraries are in the lib folder already.
+
 ## Usage
 
 This should really come with a setup.py, but I've not looked at those yet, sorry!
@@ -30,7 +32,6 @@ The client object has three main methods which can be used.
 The configure method can be used to pass configuration keys and values to the client. I'd expect any programs that use it to implement their own wrapper with `.configure()` and call `._configure()` from within that wrapper.  
 
 Parameters:
-
 * `basicserver` - The root server path. Default is http://heroesofnewerth.com. Needed for message of the day grabbing.
 * `chatport` - The port that the chat server listens on. Default is 11031. Shouldn't change.
 * `honver` - The version string for HoN. Default 2.5.7.0
@@ -39,11 +40,15 @@ Parameters:
 * `protocol` - The chat version protocol to use. Default 21. Will need to be updated after most large patches.
 
 ###__client.login(username, password)__    
-Logs the user in to the chat server and starts the packet handler loop.
-Paramters:
+Logs the user in to the chat server and starts handling socket events.  
 
+Paramters:
 * `username` - A string with the user's account user name.
 * `password` - A string with the md5 hash of the user's account password.
   
 __client.logout()__  
   Logs out from the chat server and closes any connections. Takes no parameters.
+
+Once the user has been logged in, the client will start sending and receiving TCP packets, and handling any received ones to the registered event handlers.
+
+I will write some documentation at a later point for those, but for now I have a very basic client example available at [BasicHoNClient](http://github.com/Joev-/BasicHoNClient/)
