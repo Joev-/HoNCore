@@ -19,19 +19,31 @@ HoNCore makes use of two additional libraries.
 
 This should really come with a setup.py, but I've not looked at those yet, sorry!
 The core object used from this library is the `HoNClient` from `client.py`. Import that and create a HoNClient object to work with.
-```python
-from honcore.client import HoNClient
 
-client = HoNClient()
-```
+    from honcore.client import HoNClient
+
+    client = HoNClient()
 
 The client object has three main methods which can be used.  
 
-  __client.configure()__  
-    Possible configuration parameters:
-    * Test
-    * Test
-  __client.login(username, password)__    
-    Pass a username and a md5 hashed password as strings to this method to have the client log in and connect to the chat server.  
-  __client.logout()__  
-    Logs out from the chat server and closes any connections.  
+###__client._configure(**kwargs)__  
+The configure method can be used to pass configuration keys and values to the client. I'd expect any programs that use it to implement their own wrapper with `.configure()` and call `._configure()` from within that wrapper.  
+
+Parameters:
+
+* `basicserver` - The root server path. Default is http://heroesofnewerth.com. Needed for message of the day grabbing.
+* `chatport` - The port that the chat server listens on. Default is 11031. Shouldn't change.
+* `honver` - The version string for HoN. Default 2.5.7.0
+* `invis` - Setting to a true value will log the user in using 'invisible' mode.
+* `masterserver` - The root path to the master server. Default is http://masterserver.hon.s2games.com. Needed for all master server related functions.
+* `protocol` - The chat version protocol to use. Default 21. Will need to be updated after most large patches.
+
+###__client.login(username, password)__    
+Logs the user in to the chat server and starts the packet handler loop.
+Paramters:
+
+* `username` - A string with the user's account user name.
+* `password` - A string with the md5 hash of the user's account password.
+  
+__client.logout()__  
+  Logs out from the chat server and closes any connections. Takes no parameters.
