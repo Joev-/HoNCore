@@ -1,23 +1,6 @@
 """ 
 HoNCore. Python library providing connectivity and functionality
 with HoN's chat server.
-
-Copyright (c) 2011 Joseph Vaughan.
-
-This file is part of HoNCore.
-
-HoNCore is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-HoNCore is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with HoNCore.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 import struct, time, threading, thread, socket
