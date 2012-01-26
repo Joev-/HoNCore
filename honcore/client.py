@@ -397,17 +397,18 @@ class Event:
         are then triggered when the event occurs.
 
         A standard set of events are initialised by the library which should cover nearly everything.
-        The core client will store a list of the standard events in client.events.
+        The core client will store a list of the standard events in client.__events.
 
-        The front end client should then connect these events to functions by calling the connect 
-        method on the specific event object. e.g.
+        Events can have functions connected to them using the client.connect_event method. A constant representing the desired
+        event is passed, along with an optional priority.
 
-        self.events.login.connect(self.on_login_event)
-
-        The functions are stored in a list called handlers, each function is ran when the event is triggered.
-
-        The functions can be assigned a priority so that they are executed in an order. This is useful for
-        ensuring that lower level network/core client related functions are executed first.
+        The functions are stored in a list called handlers, each function is executed in order of priority, from lowest to highest,
+        when the event is triggered.
+        Imported events would have a priority of 1, as they would be handled first.
+        Less important events could have a priority of 5, while normal events hover around 3 or 4.
+        
+        This is useful as it allows for core/client events to be processed first to ensure that data is available to the client's 
+        internal data before it is used elsewhere in the program, such as in the User Interface.
 
         On the networking side, the events are triggered after the packet data has been parsed and constructed into useful data.
         The process would be as follows:
@@ -436,8 +437,7 @@ class Event:
     
     def connect(self, function, priority=5):
         """ Connects a function to a specific event.
-            The event is given as an english name, which corresponds
-            to a constant in the packet definition file.
+            The event is given as a constant, that is defined the packet definition file.
         """
         self.handlers.append(self.ConnectedMethod(function, priority))
 
