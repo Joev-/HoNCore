@@ -4,7 +4,6 @@ A python library that provides a 'client' interface to the HoN chat servers.
 
 ## About
 This is a project that I worked on solely, as a way to teach myself Python over the last year. Most of the work took place between July and October before I became too busy with life and working.  
-My main goal was to create a light-weight client that I could run on the Desktop and that project was called [HoNChatPy](http://github.com/Joev-/honchatpy.git), unfortunately that project did not really take off.  
 As I am no longer devloping any of my HoN projects, nor really playing HoN I would like to release them into the Public Domain and hope that others can use them to learn from and hopefully create something interesting.
 
 ## Requirements
